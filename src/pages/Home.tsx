@@ -1,22 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Dumbbell, 
-  Shield, 
-  Zap, 
-  Users, 
-  ArrowRight, 
-  CheckCircle2,
-  Star,
-  Play,
-  Calendar,
-  Video,
-  Award,
-  ChevronRight,
-  Quote,
-  Activity
-} from 'lucide-react';
+import { Dumbbell, Shield, Zap, Users, ArrowRight, CircleCheck as CheckCircle2, Star, Play, Calendar, Video, Award, ChevronRight, Quote, Activity } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { User } from '../types';
 

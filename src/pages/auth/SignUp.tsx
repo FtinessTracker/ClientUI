@@ -2,7 +2,7 @@ import React from 'react';
 import { SignUp } from '@clerk/clerk-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Dumbbell, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Dumbbell, ArrowLeft, CircleCheck as CheckCircle2 } from 'lucide-react';
 
 const PERKS = [
   'Access to 500+ elite certified trainers',
