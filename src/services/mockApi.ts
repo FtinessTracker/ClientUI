@@ -1,4 +1,4 @@
-import { Trainer, Booking, User, Role } from '../types';
+import { Trainer, Booking, Role } from '../types';
 
 const MOCK_TRAINERS: Trainer[] = [
   {
@@ -72,30 +72,6 @@ export const mockApi = {
     const trainer = MOCK_TRAINERS.find(t => t.id === id);
     if (!trainer) throw new Error('Trainer not found');
     return trainer;
-  },
-
-  getCurrentUser: async (): Promise<User | null> => {
-    await sleep(300);
-    const stored = localStorage.getItem('flexfit_user');
-    return stored ? JSON.parse(stored) : null;
-  },
-
-  login: async (email: string, role: Role): Promise<User> => {
-    await sleep(1000);
-    const user: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      email,
-      name: email.split('@')[0],
-      role,
-      joinedAt: new Date().toISOString()
-    };
-    localStorage.setItem('flexfit_user', JSON.stringify(user));
-    return user;
-  },
-
-  logout: async () => {
-    await sleep(300);
-    localStorage.removeItem('flexfit_user');
   },
 
   getBookings: async (userId: string, role: Role): Promise<Booking[]> => {

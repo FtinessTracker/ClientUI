@@ -20,11 +20,12 @@ import { mockApi } from '../../services/mockApi';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAppUser } from '../../hooks/useAppUser';
 
 export default function ClientDashboard() {
-  const { data: user } = useQuery({ queryKey: ['user'], queryFn: mockApi.getCurrentUser });
-  const { data: bookings, isLoading } = useQuery({ 
-    queryKey: ['bookings', user?.id], 
+  const { appUser: user } = useAppUser();
+  const { data: bookings, isLoading } = useQuery({
+    queryKey: ['bookings', user?.id],
     queryFn: () => mockApi.getBookings(user!.id, 'client'),
     enabled: !!user
   });
@@ -35,7 +36,7 @@ export default function ClientDashboard() {
     <div className="space-y-10">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">Welcome back, {user?.name}! 👋</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">Welcome back, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-slate-500 font-medium text-lg">You're making great progress. Here's what's happening today.</p>
         </div>
         <Button size="lg" className="rounded-2xl shadow-xl shadow-primary/20 h-14 px-8" asChild>

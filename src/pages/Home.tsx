@@ -53,10 +53,10 @@ export default function Home({ user }: { user: User | null }) {
             ) : (
               <>
                 <Button asChild variant="ghost" className="hidden sm:inline-flex font-bold">
-                  <Link to="/login">Log in</Link>
+                  <Link to="/sign-in">Log in</Link>
                 </Button>
                 <Button asChild variant="default" className="rounded-full px-8 shadow-xl shadow-primary/20">
-                  <Link to="/login">Join FlexFit</Link>
+                  <Link to="/sign-up">Join FlexFit</Link>
                 </Button>
               </>
             )}
@@ -97,8 +97,8 @@ export default function Home({ user }: { user: User | null }) {
               
               <div className="flex flex-col sm:flex-row gap-5">
                 <Button size="lg" className="h-16 px-10 text-lg rounded-full shadow-2xl shadow-primary/20 group" asChild>
-                  <Link to="/login">
-                    Start Your Journey 
+                  <Link to="/sign-up">
+                    Start Your Journey
                     <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </Button>
@@ -350,7 +350,7 @@ export default function Home({ user }: { user: User | null }) {
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center">
               <Button size="lg" className="h-16 px-12 text-lg rounded-full bg-accent text-accent-foreground hover:bg-accent/90 shadow-2xl shadow-accent/20" asChild>
-                <Link to="/login">Get Started Now</Link>
+                <Link to="/sign-up">Get Started Now</Link>
               </Button>
               <Button variant="outline" size="lg" className="h-16 px-12 text-lg rounded-full border-white/20 text-white hover:bg-white/10">
                 View All Trainers

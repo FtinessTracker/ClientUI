@@ -30,6 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/utils';
+import { useAppUser } from '../../hooks/useAppUser';
 
 const CHART_DATA = [
   { name: 'Mon', earnings: 150 },
@@ -42,9 +43,9 @@ const CHART_DATA = [
 ];
 
 export default function TrainerDashboard() {
-  const { data: user } = useQuery({ queryKey: ['user'], queryFn: mockApi.getCurrentUser });
-  const { data: bookings, isLoading } = useQuery({ 
-    queryKey: ['bookings', user?.id], 
+  const { appUser: user } = useAppUser();
+  const { data: bookings, isLoading } = useQuery({
+    queryKey: ['bookings', user?.id],
     queryFn: () => mockApi.getBookings(user!.id, 'trainer'),
     enabled: !!user
   });
@@ -56,7 +57,7 @@ export default function TrainerDashboard() {
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 mb-2">Trainer Dashboard</h1>
-          <p className="text-slate-500 font-medium text-lg">Good morning, {user?.name}. Here's your business at a glance.</p>
+          <p className="text-slate-500 font-medium text-lg">Good morning, {user?.name?.split(' ')[0]}. Here's your business at a glance.</p>
         </div>
         <div className="flex items-center gap-4">
           <Button variant="outline" className="rounded-2xl h-12 px-6 font-bold border-slate-200 hover:bg-slate-50">
