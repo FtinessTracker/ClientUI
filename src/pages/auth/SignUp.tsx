@@ -2,10 +2,7 @@ import React, { useState } from 'react';
 import { useSignUp } from '@clerk/clerk-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Dumbbell, ArrowLeft, CircleCheck as CheckCircle2, Trophy, TrendingUp,
-  Clock, Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Loader2,
-} from 'lucide-react';
+import { Dumbbell, ArrowLeft, CircleCheck as CheckCircle2, Trophy, TrendingUp, Clock, Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Loader as Loader2 } from 'lucide-react';
 
 const PERKS = [
   'Access to 500+ elite certified trainers',
