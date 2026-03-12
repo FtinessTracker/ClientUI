@@ -4,13 +4,8 @@ import { User } from '../types';
 export function useAppUser(): { appUser: User | null; isLoaded: boolean } {
   const { user, isLoaded } = useUser();
 
-  if (!isLoaded) {
-    return { appUser: null, isLoaded: false };
-  }
-
-  if (!user) {
-    return { appUser: null, isLoaded: true };
-  }
+  if (!isLoaded) return { appUser: null, isLoaded: false };
+  if (!user) return { appUser: null, isLoaded: true };
 
   const role = (user.publicMetadata?.role as 'client' | 'trainer') || 'client';
 

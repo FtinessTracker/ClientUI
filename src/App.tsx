@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
-import { Dumbbell } from 'lucide-react';
+import { Dumbbell, AlertTriangle } from 'lucide-react';
 import AppLayout from './layouts/AppLayout';
 import Home from './pages/Home';
 import SignInPage from './pages/auth/SignIn';
@@ -18,10 +18,7 @@ import { useAppUser } from './hooks/useAppUser';
 
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000,
-      retry: 1,
-    },
+    queries: { staleTime: 60 * 1000, retry: 1 },
   },
 });
 
@@ -70,9 +67,7 @@ function ProtectedRoute({
   const { appUser, isLoaded: userLoaded } = useAppUser();
   const location = useLocation();
 
-  if (!isLoaded || !userLoaded) {
-    return <LoadingScreen />;
-  }
+  if (!isLoaded || !userLoaded) return <LoadingScreen />;
 
   if (!isSignedIn) {
     return <Navigate to="/sign-in" state={{ from: location }} replace />;
@@ -89,26 +84,15 @@ function AppRoutes() {
   const { isSignedIn, isLoaded } = useAuth();
   const { appUser } = useAppUser();
 
-  if (!isLoaded) {
-    return <LoadingScreen />;
-  }
+  if (!isLoaded) return <LoadingScreen />;
 
   return (
     <Routes>
-      {/* Public */}
       <Route path="/" element={<Home user={appUser} />} />
-      <Route
-        path="/sign-in"
-        element={isSignedIn ? <Navigate to="/dashboard" /> : <SignInPage />}
-      />
-      <Route
-        path="/sign-up"
-        element={isSignedIn ? <Navigate to="/dashboard" /> : <SignUpPage />}
-      />
-      {/* Legacy login redirect */}
+      <Route path="/sign-in" element={isSignedIn ? <Navigate to="/dashboard" /> : <SignInPage />} />
+      <Route path="/sign-up" element={isSignedIn ? <Navigate to="/dashboard" /> : <SignUpPage />} />
       <Route path="/login" element={<Navigate to="/sign-in" replace />} />
 
-      {/* Shared Protected */}
       <Route
         path="/dashboard"
         element={
@@ -117,47 +101,49 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/session/:id"
-        element={
-          <ProtectedRoute>
-            <SessionRoom />
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Client Only */}
-      <Route
-        path="/trainers"
-        element={
-          <ProtectedRoute allowedRoles={['client']}>
-            <TrainerDiscovery />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/trainer/:id"
-        element={
-          <ProtectedRoute allowedRoles={['client']}>
-            <TrainerProfile />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/book/:id"
-        element={
-          <ProtectedRoute allowedRoles={['client']}>
-            <BookingFlow />
-          </ProtectedRoute>
-        }
-      />
-
+      <Route path="/session/:id" element={<ProtectedRoute><SessionRoom /></ProtectedRoute>} />
+      <Route path="/trainers" element={<ProtectedRoute allowedRoles={['client']}><TrainerDiscovery /></ProtectedRoute>} />
+      <Route path="/trainer/:id" element={<ProtectedRoute allowedRoles={['client']}><TrainerProfile /></ProtectedRoute>} />
+      <Route path="/book/:id" element={<ProtectedRoute allowedRoles={['client']}><BookingFlow /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }
 
+function NoClerkBanner() {
+  return (
+    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-lg text-sm font-semibold text-amber-800 max-w-sm">
+      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+      <span>Add your Clerk key in <code className="font-mono text-xs bg-amber-100 px-1.5 py-0.5 rounded">.env</code> to enable auth</span>
+    </div>
+  );
+}
+
+function NoClerkApp() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<><Home user={null} /><NoClerkBanner /></>} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
+}
+
 export default function App() {
+  const hasClerk = typeof import.meta.env.VITE_CLERK_PUBLISHABLE_KEY === 'string' &&
+    (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_test_') ||
+     import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_live_')) &&
+    !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.includes('placeholder');
+
+  if (!hasClerk) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <NoClerkApp />
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
