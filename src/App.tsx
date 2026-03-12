@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
-import { Dumbbell, AlertTriangle } from 'lucide-react';
+import { Dumbbell, TriangleAlert as AlertTriangle } from 'lucide-react';
 import AppLayout from './layouts/AppLayout';
 import Home from './pages/Home';
 import SignInPage from './pages/auth/SignIn';
