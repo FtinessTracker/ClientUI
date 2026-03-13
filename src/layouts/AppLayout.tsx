@@ -95,19 +95,23 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
           </button>
         </div>
 
-        {/* Membership Card */}
-        <div className="px-5 mb-5">
-          <div className="bg-white/5 rounded-2xl p-4 border border-white/8">
+        {/* User Profile Card */}
+        <div className="px-5 mb-6">
+          <div className="bg-gradient-to-br from-accent/15 to-accent/5 rounded-2xl p-4 border border-accent/15">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-accent/20 flex items-center justify-center">
-                <Award className="text-accent w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Membership</p>
-                <p className="text-sm font-bold text-white">FlexFit Pro</p>
+              {clerkUser?.imageUrl ? (
+                <img src={clerkUser.imageUrl} alt={displayName} className="w-10 h-10 rounded-xl object-cover border-2 border-white/15 shrink-0" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-accent/30 border border-accent/25 flex items-center justify-center shrink-0">
+                  <span className="text-white font-black text-sm">{initials}</span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <p className="text-sm font-black text-white truncate">{displayName.split(' ')[0]}</p>
+                <p className="text-[10px] font-black text-accent uppercase tracking-[0.15em]">Pro Member</p>
               </div>
             </div>
-            <div className="w-full bg-white/8 h-1 rounded-full overflow-hidden">
+            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: '75%' }}
@@ -146,7 +150,7 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
                 )}
                 <item.icon
                   className={cn(
-                    'w-4.5 h-4.5 transition-colors shrink-0',
+                    'w-4 h-4 transition-colors shrink-0',
                     isActive ? 'text-accent' : 'text-slate-600 group-hover:text-slate-300'
                   )}
                 />
@@ -281,7 +285,7 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
+        <div className="flex-1 overflow-y-auto bg-slate-50/80">
           <motion.div
             key={location.pathname}
             initial={{ opacity: 0, y: 8 }}
