@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Search, Star, MapPin, Clock, SlidersHorizontal, Grid, List as ListIcon, X, Check,
-} from 'lucide-react';
+import { Search, Star, MapPin, Clock, SlidersHorizontal, Grid2x2 as Grid, List as ListIcon, X, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockApi } from '../../services/mockApi';

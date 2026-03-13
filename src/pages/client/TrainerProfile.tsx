@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Star, Globe, Award, ShieldCheck, MessageSquare, Calendar,
-  PlayCircle, CheckCircle2, ArrowLeft, Clock, Users,
-} from 'lucide-react';
+import { Star, Globe, Award, ShieldCheck, MessageSquare, Calendar, CirclePlay as PlayCircle, CircleCheck as CheckCircle2, ArrowLeft, Clock, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockApi } from '../../services/mockApi';
 import { Button } from '../../components/ui/Button';

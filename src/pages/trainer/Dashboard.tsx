@@ -1,9 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Users, Calendar, DollarSign, Star, Clock, Video, ChevronRight,
-  Activity, ArrowUpRight, TrendingUp, MoreHorizontal,
-} from 'lucide-react';
+import { Users, Calendar, DollarSign, Star, Clock, Video, ChevronRight, Activity, ArrowUpRight, TrendingUp, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
