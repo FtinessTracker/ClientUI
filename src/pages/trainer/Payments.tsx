@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import {
-  DollarSign, TrendingUp, Download, Filter, ArrowUpRight, ArrowDownRight,
-  CreditCard, CheckCircle, Clock, XCircle, BarChart3, Calendar, ChevronDown
-} from 'lucide-react';
+import { DollarSign, TrendingUp, Download, ListFilter as Filter, ArrowUpRight, ArrowDownRight, CreditCard, CircleCheck as CheckCircle, Clock, Circle as XCircle, ChartBar as BarChart3, Calendar, ChevronDown } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell
@@ -14,7 +11,7 @@ import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { PaymentRow } from '../../lib/supabase';
+import { PaymentRow } from '../../types/trainer';
 
 const MONTHLY_DATA = [
   { month: 'Oct', earnings: 2100, sessions: 28 },

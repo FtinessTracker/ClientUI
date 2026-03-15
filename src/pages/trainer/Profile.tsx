@@ -2,16 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/clerk-react';
-import {
-  User, Star, Award, Globe, Instagram, MapPin, Clock, DollarSign,
-  Edit3, Check, X, Camera, ExternalLink, Plus, Trash2, ChevronRight,
-  Languages, Briefcase, Shield, TrendingUp, MessageSquare
-} from 'lucide-react';
+import { User, Star, Award, Globe, Instagram, MapPin, Clock, DollarSign, CreditCard as Edit3, Check, X, Camera, ExternalLink, Plus, Trash2, ChevronRight, Languages, Briefcase, Shield, TrendingUp, MessageSquare } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { TrainerProfileRow } from '../../lib/supabase';
+import { TrainerProfileRow } from '../../types/trainer';
 
 const SPECIALTIES_OPTIONS = [
   'Strength Training', 'HIIT', 'Yoga', 'Pilates', 'Cardio', 'Nutrition',

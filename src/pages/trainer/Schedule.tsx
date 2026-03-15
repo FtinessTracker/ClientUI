@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Calendar, Clock, Plus, Trash2, Video, MapPin, ChevronLeft, ChevronRight,
-  User, CheckCircle, XCircle, AlertCircle, MoreHorizontal
-} from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Video, MapPin, ChevronLeft, ChevronRight, User, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 import { format, addDays, startOfWeek, isSameDay, isToday, isPast } from 'date-fns';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { BookingRow, AvailabilitySlotRow } from '../../lib/supabase';
+import { BookingRow, AvailabilitySlotRow } from '../../types/trainer';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TIMES = [

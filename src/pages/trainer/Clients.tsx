@@ -1,16 +1,13 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Users, Search, Filter, ChevronRight, Star, Calendar, MessageSquare,
-  TrendingUp, Clock, MoreHorizontal, Plus, Activity, Target, Flame
-} from 'lucide-react';
+import { Users, Search, ListFilter as Filter, ChevronRight, Star, Calendar, MessageSquare, TrendingUp, Clock, MoveHorizontal as MoreHorizontal, Plus, Activity, Target, Flame } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { TrainerClientRow } from '../../lib/supabase';
+import { TrainerClientRow } from '../../types/trainer';
 
 const CLIENT_AVATARS: Record<number, string> = {
   0: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=120',

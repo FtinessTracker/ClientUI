@@ -1,15 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  MessageSquare, Send, Search, MoreHorizontal, Phone, Video,
-  Paperclip, Smile, ArrowLeft, Circle
-} from 'lucide-react';
+import { MessageSquare, Send, Search, MoveHorizontal as MoreHorizontal, Phone, Video, Paperclip, Smile, ArrowLeft, Circle } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
 import { cn } from '../../lib/utils';
 import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { ConversationRow, MessageRow } from '../../lib/supabase';
+import { ConversationRow, MessageRow } from '../../types/trainer';
 
 const MOCK_CONVERSATIONS: ConversationRow[] = [
   {
