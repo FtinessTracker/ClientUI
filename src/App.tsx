@@ -10,6 +10,12 @@ import SignInPage from './pages/auth/SignIn';
 import SignUpPage from './pages/auth/SignUp';
 import ClientDashboard from './pages/client/Dashboard';
 import TrainerDashboard from './pages/trainer/Dashboard';
+import TrainerOnboarding from './pages/trainer/Onboarding';
+import TrainerSchedule from './pages/trainer/Schedule';
+import TrainerClients from './pages/trainer/Clients';
+import TrainerMessages from './pages/trainer/Messages';
+import TrainerPayments from './pages/trainer/Payments';
+import TrainerProfilePage from './pages/trainer/Profile';
 import TrainerDiscovery from './pages/client/TrainerDiscovery';
 import TrainerProfile from './pages/client/TrainerProfile';
 import BookingFlow from './pages/client/BookingFlow';
@@ -105,6 +111,12 @@ function AppRoutes() {
       <Route path="/trainers" element={<ProtectedRoute allowedRoles={['client']}><TrainerDiscovery /></ProtectedRoute>} />
       <Route path="/trainer/:id" element={<ProtectedRoute allowedRoles={['client']}><TrainerProfile /></ProtectedRoute>} />
       <Route path="/book/:id" element={<ProtectedRoute allowedRoles={['client']}><BookingFlow /></ProtectedRoute>} />
+      <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />
+      <Route path="/trainer/schedule" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerSchedule /></ProtectedRoute>} />
+      <Route path="/trainer/clients" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerClients /></ProtectedRoute>} />
+      <Route path="/trainer/messages" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerMessages /></ProtectedRoute>} />
+      <Route path="/trainer/payments" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerPayments /></ProtectedRoute>} />
+      <Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerProfilePage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

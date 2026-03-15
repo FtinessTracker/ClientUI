@@ -32,10 +32,15 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['client', 'trainer'] },
   { label: 'Find Trainers', href: '/trainers', icon: Search, roles: ['client'] },
-  { label: 'My Schedule', href: '/schedule', icon: Calendar, roles: ['client', 'trainer'] },
-  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['client', 'trainer'] },
-  { label: 'Payments', href: '/payments', icon: CreditCard, roles: ['client', 'trainer'] },
-  { label: 'Profile', href: '/profile', icon: User, roles: ['client', 'trainer'] },
+  { label: 'My Schedule', href: '/trainer/schedule', icon: Calendar, roles: ['trainer'] },
+  { label: 'My Clients', href: '/trainer/clients', icon: Award, roles: ['trainer'] },
+  { label: 'Messages', href: '/trainer/messages', icon: MessageSquare, roles: ['trainer'] },
+  { label: 'Payments', href: '/trainer/payments', icon: CreditCard, roles: ['trainer'] },
+  { label: 'My Profile', href: '/trainer/profile', icon: User, roles: ['trainer'] },
+  { label: 'My Schedule', href: '/schedule', icon: Calendar, roles: ['client'] },
+  { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['client'] },
+  { label: 'Payments', href: '/payments', icon: CreditCard, roles: ['client'] },
+  { label: 'Profile', href: '/profile', icon: User, roles: ['client'] },
 ];
 
 export default function AppLayout({ children, user }: { children: React.ReactNode; user: any }) {
