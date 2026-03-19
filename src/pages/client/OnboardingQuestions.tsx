@@ -1,222 +1,257 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ArrowLeft, SkipForward, Dumbbell, Check, X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Dumbbell, ChevronRight, Check, X, Heart, CircleAlert as AlertCircle, Stethoscope, Activity, Zap, Brain } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { cn } from '../../lib/utils';
 
-interface Question {
+interface ParQQuestion {
   id: string;
+  section: string;
   question: string;
-  description?: string;
+  detail?: string;
+  icon: React.ElementType;
 }
 
-const QUESTIONS: Question[] = [
+const PARQ_QUESTIONS: ParQQuestion[] = [
   {
-    id: 'has_trained_before',
-    question: 'Have you worked with a personal trainer before?',
-    description: "This helps us set the right expectations for your first session.",
+    id: 'heart_condition',
+    section: 'Cardiovascular',
+    question: 'Has your doctor ever said that you have a heart condition and that you should only do physical activity recommended by a doctor?',
+    icon: Heart,
   },
   {
-    id: 'has_specific_goal',
-    question: 'Do you have a specific fitness goal in mind?',
-    description: "We'll make sure your trainer focuses on what matters most to you.",
+    id: 'chest_pain_activity',
+    section: 'Cardiovascular',
+    question: 'Do you feel pain in your chest when you do physical activity?',
+    icon: Activity,
   },
   {
-    id: 'has_health_conditions',
-    question: 'Do you have any injuries or health conditions we should know about?',
-    description: "Your safety is our priority. We'll match you with a specialist if needed.",
+    id: 'chest_pain_rest',
+    section: 'Cardiovascular',
+    question: 'In the past month, have you had chest pain when you were not doing physical activity?',
+    icon: Heart,
   },
   {
-    id: 'has_equipment',
-    question: 'Do you have any workout equipment at home?',
-    description: "Weights, resistance bands, a yoga mat — anything counts.",
+    id: 'dizziness',
+    section: 'Balance & Coordination',
+    question: 'Do you lose your balance because of dizziness, or do you ever lose consciousness?',
+    icon: Brain,
   },
   {
-    id: 'has_dietary_restrictions',
-    question: 'Do you follow any specific diet or have nutritional restrictions?',
-    description: "Some of our trainers also offer nutrition coaching alongside sessions.",
+    id: 'bone_joint',
+    section: 'Musculoskeletal',
+    question: 'Do you have a bone or joint problem (for example, back, knee, or hip) that could be made worse by a change in your physical activity?',
+    icon: Zap,
   },
   {
-    id: 'wants_regular_schedule',
-    question: 'Are you looking to train on a regular weekly schedule?',
-    description: "Consistency is key — we can help you find a trainer who matches your routine.",
+    id: 'blood_pressure_medication',
+    section: 'Medication',
+    question: 'Is your doctor currently prescribing drugs (for example, water pills) for your blood pressure or heart condition?',
+    icon: Stethoscope,
+  },
+  {
+    id: 'other_reason',
+    section: 'General Health',
+    question: 'Do you know of any other reason why you should not do physical activity?',
+    detail: 'This includes any chronic illness, condition, or recent surgery not covered above.',
+    icon: AlertCircle,
   },
 ];
 
+const SECTION_COLORS: Record<string, string> = {
+  'Cardiovascular': 'text-rose-500 bg-rose-50',
+  'Balance & Coordination': 'text-blue-500 bg-blue-50',
+  'Musculoskeletal': 'text-amber-500 bg-amber-50',
+  'Medication': 'text-emerald-500 bg-emerald-50',
+  'General Health': 'text-slate-500 bg-slate-100',
+};
+
 export default function OnboardingQuestions() {
   const navigate = useNavigate();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, boolean>>({});
-  const [direction, setDirection] = useState(1);
-  const [completing, setCompleting] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, boolean | null>>({});
 
-  const question = QUESTIONS[currentIndex];
-  const answered = question.id in answers;
-  const isLast = currentIndex === QUESTIONS.length - 1;
-  const progress = ((currentIndex + 1) / QUESTIONS.length) * 100;
+  const answeredCount = Object.keys(answers).length;
+  const allAnswered = answeredCount === PARQ_QUESTIONS.length;
+  const hasYes = Object.values(answers).some(v => v === true);
 
-  function selectAnswer(value: boolean) {
-    setAnswers(prev => ({ ...prev, [question.id]: value }));
+  function setAnswer(id: string, value: boolean) {
+    setAnswers(prev => ({ ...prev, [id]: value }));
   }
 
-  function handleNext() {
-    if (isLast) {
-      setCompleting(true);
-      setTimeout(() => navigate('/calendar'), 400);
-    } else {
-      setDirection(1);
-      setCurrentIndex(i => i + 1);
-    }
-  }
-
-  function handleBack() {
-    setDirection(-1);
-    setCurrentIndex(i => i - 1);
+  function handleDone() {
+    navigate('/calendar');
   }
 
   function handleSkip() {
     navigate('/calendar');
   }
 
+  const progress = (answeredCount / PARQ_QUESTIONS.length) * 100;
+
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-slate-900 p-2 rounded-xl">
-            <Dumbbell className="text-accent w-4 h-4" />
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-slate-900 p-1.5 rounded-xl">
+              <Dumbbell className="text-accent w-4 h-4" />
+            </div>
+            <span className="text-lg font-black tracking-tighter text-slate-900">FlexFit</span>
           </div>
-          <span className="text-lg font-black tracking-tighter text-slate-900">FlexFit</span>
+          <button
+            onClick={handleSkip}
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-slate-700 transition-colors px-3 py-1.5 rounded-xl hover:bg-slate-100"
+          >
+            Skip for now
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
-        <button
-          onClick={handleSkip}
-          className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <SkipForward className="w-4 h-4" />
-          Skip for now
-        </button>
-      </div>
+        <div className="h-0.5 bg-slate-100">
+          <motion.div
+            className="h-full bg-accent"
+            animate={{ width: `${progress}%` }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          />
+        </div>
+      </header>
 
-      <div className="h-1 bg-slate-100">
+      <main className="flex-1 max-w-3xl mx-auto w-full px-4 sm:px-6 py-10">
         <motion.div
-          className="h-full bg-accent rounded-full"
-          initial={{ width: 0 }}
-          animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
-        />
-      </div>
-
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-lg">
-          <div className="mb-4">
-            <span className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">
-              {currentIndex + 1} of {QUESTIONS.length}
-            </span>
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-8"
+        >
+          <div className="inline-flex items-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 text-xs font-black uppercase tracking-[0.15em] px-3 py-1.5 rounded-full mb-4">
+            <Heart className="w-3 h-3" />
+            PAR-Q+ Health Screening
           </div>
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight leading-tight mb-3">
+            Before we get started
+          </h1>
+          <p className="text-slate-500 text-base font-medium leading-relaxed max-w-xl">
+            The Physical Activity Readiness Questionnaire (PAR-Q+) helps ensure your safety during exercise. Please answer all questions honestly. This takes less than 2 minutes.
+          </p>
+        </motion.div>
 
-          <AnimatePresence mode="wait" custom={direction}>
-            <motion.div
-              key={question.id}
-              custom={direction}
-              initial={{ opacity: 0, x: direction * 40 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: direction * -40 }}
-              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-            >
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight mb-3 leading-tight">
-                {question.question}
-              </h2>
-              {question.description && (
-                <p className="text-slate-400 font-medium mb-10 text-base leading-relaxed">
-                  {question.description}
-                </p>
-              )}
+        <div className="space-y-3 mb-8">
+          {PARQ_QUESTIONS.map((q, i) => {
+            const answered = q.id in answers;
+            const value = answers[q.id];
+            const Icon = q.icon;
+            const sectionStyle = SECTION_COLORS[q.section] || 'text-slate-500 bg-slate-100';
 
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={() => selectAnswer(true)}
-                  className={`
-                    group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2
-                    transition-all duration-200 hover:-translate-y-0.5
-                    ${answers[question.id] === true
-                      ? 'border-emerald-500 bg-emerald-500 shadow-xl shadow-emerald-500/20'
-                      : 'border-slate-200 bg-white hover:border-emerald-300 hover:shadow-lg'
-                    }
-                  `}
-                >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                    answers[question.id] === true
-                      ? 'bg-white/20'
-                      : 'bg-emerald-50 group-hover:bg-emerald-100'
-                  }`}>
-                    <Check className={`w-7 h-7 ${answers[question.id] === true ? 'text-white' : 'text-emerald-500'}`} />
+            return (
+              <motion.div
+                key={q.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                className={cn(
+                  'bg-white rounded-2xl border transition-all duration-200',
+                  answered
+                    ? value === true
+                      ? 'border-rose-200 shadow-sm shadow-rose-100/50'
+                      : 'border-emerald-200 shadow-sm shadow-emerald-100/50'
+                    : 'border-slate-100 shadow-sm hover:border-slate-200'
+                )}
+              >
+                <div className="p-5 sm:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className={cn('flex items-center gap-1.5 text-xs font-black uppercase tracking-wider px-2.5 py-1 rounded-full', sectionStyle)}>
+                          <Icon className="w-3 h-3" />
+                          {q.section}
+                        </div>
+                        <span className="text-xs font-bold text-slate-300">Q{i + 1}</span>
+                      </div>
+                      <p className="text-slate-800 font-semibold text-sm sm:text-base leading-relaxed mb-1">
+                        {q.question}
+                      </p>
+                      {q.detail && (
+                        <p className="text-slate-400 text-xs font-medium mt-1.5 leading-relaxed">{q.detail}</p>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-lg font-black tracking-tight ${
-                    answers[question.id] === true ? 'text-white' : 'text-slate-800'
-                  }`}>
-                    Yes
-                  </span>
-                </button>
 
-                <button
-                  onClick={() => selectAnswer(false)}
-                  className={`
-                    group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2
-                    transition-all duration-200 hover:-translate-y-0.5
-                    ${answers[question.id] === false
-                      ? 'border-slate-800 bg-slate-900 shadow-xl shadow-slate-900/20'
-                      : 'border-slate-200 bg-white hover:border-slate-400 hover:shadow-lg'
-                    }
-                  `}
-                >
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${
-                    answers[question.id] === false
-                      ? 'bg-white/10'
-                      : 'bg-slate-100 group-hover:bg-slate-200'
-                  }`}>
-                    <X className={`w-7 h-7 ${answers[question.id] === false ? 'text-white' : 'text-slate-500'}`} />
+                  <div className="flex gap-3 mt-4">
+                    <button
+                      onClick={() => setAnswer(q.id, true)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border-2 font-bold text-sm transition-all duration-150',
+                        value === true
+                          ? 'border-rose-500 bg-rose-500 text-white shadow-lg shadow-rose-500/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:text-rose-600 hover:bg-rose-50'
+                      )}
+                    >
+                      <Check className="w-4 h-4" />
+                      Yes
+                    </button>
+                    <button
+                      onClick={() => setAnswer(q.id, false)}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-2 h-11 rounded-xl border-2 font-bold text-sm transition-all duration-150',
+                        value === false
+                          ? 'border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50'
+                      )}
+                    >
+                      <X className="w-4 h-4" />
+                      No
+                    </button>
                   </div>
-                  <span className={`text-lg font-black tracking-tight ${
-                    answers[question.id] === false ? 'text-white' : 'text-slate-800'
-                  }`}>
-                    No
-                  </span>
-                </button>
-              </div>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="flex items-center justify-between mt-12">
-            <button
-              onClick={handleBack}
-              disabled={currentIndex === 0}
-              className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-slate-700 transition-colors disabled:opacity-0 disabled:pointer-events-none"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back
-            </button>
-
-            <Button
-              onClick={handleNext}
-              disabled={!answered || completing}
-              className="rounded-full px-8 h-12 font-bold shadow-xl shadow-slate-900/15 group"
-            >
-              {isLast ? 'Get Started' : 'Next'}
-              <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </div>
-
-          <div className="flex justify-center gap-1.5 mt-8">
-            {QUESTIONS.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === currentIndex ? 'w-6 bg-accent' : i < currentIndex ? 'w-3 bg-accent/40' : 'w-3 bg-slate-200'
-                }`}
-              />
-            ))}
-          </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-      </div>
+
+        {hasYes && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mb-6 flex gap-4"
+          >
+            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-amber-800 text-sm mb-1">Medical clearance recommended</p>
+              <p className="text-amber-700 text-xs font-medium leading-relaxed">
+                You answered "Yes" to one or more questions. We recommend consulting with your doctor before starting a new physical activity program. Your trainer will also be informed to tailor sessions appropriately.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="flex flex-col sm:flex-row items-center gap-3 pb-10"
+        >
+          <Button
+            onClick={handleDone}
+            disabled={!allAnswered}
+            className="w-full sm:w-auto rounded-xl h-12 px-8 font-bold shadow-lg shadow-slate-900/15 gap-2 disabled:opacity-40"
+          >
+            Done — Take me to my calendar
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+          <button
+            onClick={handleSkip}
+            className="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            Skip and answer later
+          </button>
+        </motion.div>
+
+        <div className="flex items-center justify-between text-xs font-medium text-slate-400 pb-6">
+          <span>{answeredCount} of {PARQ_QUESTIONS.length} answered</span>
+          <span>Your answers are confidential and secure.</span>
+        </div>
+      </main>
     </div>
   );
 }
