@@ -5,10 +5,10 @@ import { useAuth } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
 import { Dumbbell, TriangleAlert as AlertTriangle } from 'lucide-react';
 import AppLayout from './layouts/AppLayout';
+import ClientLayout from './layouts/ClientLayout';
 import Home from './pages/Home';
 import SignInPage from './pages/auth/SignIn';
 import SignUpPage from './pages/auth/SignUp';
-import ClientDashboard from './pages/client/Dashboard';
 import TrainerDashboard from './pages/trainer/Dashboard';
 import TrainerOnboarding from './pages/trainer/Onboarding';
 import TrainerSchedule from './pages/trainer/Schedule';
@@ -21,6 +21,10 @@ import TrainerProfile from './pages/client/TrainerProfile';
 import BookingFlow from './pages/client/BookingFlow';
 import OnboardingQuestions from './pages/client/OnboardingQuestions';
 import ClientProfilePage from './pages/client/ClientProfile';
+import CalendarPage from './pages/client/CalendarPage';
+import WorkoutsPage from './pages/client/WorkoutsPage';
+import NutritionPage from './pages/client/NutritionPage';
+import PlansPage from './pages/client/PlansPage';
 import SessionRoom from './pages/shared/SessionRoom';
 import { useAppUser } from './hooks/useAppUser';
 
@@ -47,7 +51,7 @@ function LoadingScreen() {
         </motion.div>
         <div className="text-center">
           <p className="text-slate-900 font-black text-xl tracking-tighter">FlexFit</p>
-          <p className="text-slate-400 text-sm font-medium mt-1">Loading your dashboard...</p>
+          <p className="text-slate-400 text-sm font-medium mt-1">Loading...</p>
         </div>
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (
@@ -64,7 +68,7 @@ function LoadingScreen() {
   );
 }
 
-function ProtectedRoute({
+function TrainerRoute({
   children,
   allowedRoles,
 }: {
@@ -78,14 +82,32 @@ function ProtectedRoute({
   if (!isLoaded || !userLoaded) return <LoadingScreen />;
 
   if (!isSignedIn) {
-    return <Navigate to="/sign-in" state={{ from: location }} replace />;
+    return <Navigate to="/sign-up" state={{ from: location }} replace />;
   }
 
   if (allowedRoles && appUser && !allowedRoles.includes(appUser.role)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/calendar" replace />;
   }
 
   return <AppLayout user={appUser}>{children}</AppLayout>;
+}
+
+function ClientRoute({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const { appUser, isLoaded: userLoaded } = useAppUser();
+  const location = useLocation();
+
+  if (!isLoaded || !userLoaded) return <LoadingScreen />;
+
+  if (!isSignedIn) {
+    return <Navigate to="/sign-up" state={{ from: location }} replace />;
+  }
+
+  if (appUser?.role === 'trainer') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <ClientLayout>{children}</ClientLayout>;
 }
 
 function AppRoutes() {
@@ -97,30 +119,29 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Home user={appUser} />} />
-      <Route path="/sign-in" element={isSignedIn ? <Navigate to="/dashboard" /> : <SignInPage />} />
+      <Route path="/sign-in" element={isSignedIn ? <Navigate to="/calendar" /> : <SignInPage />} />
       <Route path="/sign-up" element={isSignedIn ? <Navigate to="/onboarding" /> : <SignUpPage />} />
       <Route path="/onboarding" element={isSignedIn ? <OnboardingQuestions /> : <Navigate to="/sign-up" />} />
       <Route path="/login" element={<Navigate to="/sign-in" replace />} />
 
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            {appUser?.role === 'trainer' ? <TrainerDashboard /> : <ClientDashboard />}
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/profile" element={<ProtectedRoute allowedRoles={['client']}><ClientProfilePage /></ProtectedRoute>} />
-      <Route path="/session/:id" element={<ProtectedRoute><SessionRoom /></ProtectedRoute>} />
-      <Route path="/trainers" element={<ProtectedRoute allowedRoles={['client']}><TrainerDiscovery /></ProtectedRoute>} />
-      <Route path="/trainer/:id" element={<ProtectedRoute allowedRoles={['client']}><TrainerProfile /></ProtectedRoute>} />
-      <Route path="/book/:id" element={<ProtectedRoute allowedRoles={['client']}><BookingFlow /></ProtectedRoute>} />
+      <Route path="/calendar" element={<ClientRoute><CalendarPage /></ClientRoute>} />
+      <Route path="/workouts" element={<ClientRoute><WorkoutsPage /></ClientRoute>} />
+      <Route path="/nutrition" element={<ClientRoute><NutritionPage /></ClientRoute>} />
+      <Route path="/plans" element={<ClientRoute><PlansPage /></ClientRoute>} />
+      <Route path="/profile" element={<ClientRoute><ClientProfilePage /></ClientRoute>} />
+      <Route path="/trainers" element={<ClientRoute><TrainerDiscovery /></ClientRoute>} />
+      <Route path="/trainer/:id" element={<ClientRoute><TrainerProfile /></ClientRoute>} />
+      <Route path="/book/:id" element={<ClientRoute><BookingFlow /></ClientRoute>} />
+      <Route path="/session/:id" element={<ClientRoute><SessionRoom /></ClientRoute>} />
+
+      <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
       <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />
-      <Route path="/trainer/schedule" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerSchedule /></ProtectedRoute>} />
-      <Route path="/trainer/clients" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerClients /></ProtectedRoute>} />
-      <Route path="/trainer/messages" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerMessages /></ProtectedRoute>} />
-      <Route path="/trainer/payments" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerPayments /></ProtectedRoute>} />
-      <Route path="/trainer/profile" element={<ProtectedRoute allowedRoles={['trainer']}><TrainerProfilePage /></ProtectedRoute>} />
+      <Route path="/trainer/schedule" element={<TrainerRoute allowedRoles={['trainer']}><TrainerSchedule /></TrainerRoute>} />
+      <Route path="/trainer/clients" element={<TrainerRoute allowedRoles={['trainer']}><TrainerClients /></TrainerRoute>} />
+      <Route path="/trainer/messages" element={<TrainerRoute allowedRoles={['trainer']}><TrainerMessages /></TrainerRoute>} />
+      <Route path="/trainer/payments" element={<TrainerRoute allowedRoles={['trainer']}><TrainerPayments /></TrainerRoute>} />
+      <Route path="/trainer/profile" element={<TrainerRoute allowedRoles={['trainer']}><TrainerProfilePage /></TrainerRoute>} />
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

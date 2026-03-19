@@ -111,23 +111,13 @@ export default function Home({ user }: { user: User | null }) {
 
           <div className="flex items-center gap-3">
             {user ? (
-              <>
-                <Button asChild variant="ghost" className="hidden sm:inline-flex h-10 text-sm font-semibold text-slate-600 hover:text-slate-900">
-                  <Link to="/dashboard">Dashboard</Link>
-                </Button>
-                <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
-                  <Link to="/trainers">Book a Session</Link>
-                </Button>
-              </>
+              <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
+                <Link to="/calendar">Book a Session</Link>
+              </Button>
             ) : (
-              <>
-                <Button asChild variant="ghost" className="hidden sm:inline-flex h-10 text-sm font-semibold text-slate-600 hover:text-slate-900">
-                  <Link to="/sign-in">Sign in</Link>
-                </Button>
-                <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
-                  <Link to="/sign-up?intent=book">Book a Session</Link>
-                </Button>
-              </>
+              <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
+                <Link to="/sign-up">Book a Session</Link>
+              </Button>
             )}
           </div>
         </div>
@@ -650,10 +640,7 @@ export default function Home({ user }: { user: User | null }) {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" className="h-14 px-12 rounded-full bg-accent hover:bg-accent/90 text-white font-bold text-base shadow-2xl shadow-accent/25">
-                  <Link to="/sign-up">Get Started — It's Free</Link>
-                </Button>
-                <Button asChild variant="outline" size="lg" className="h-14 px-12 rounded-full border-white/15 text-white hover:bg-white/8 font-bold text-base">
-                  <Link to="/sign-in">Sign In</Link>
+                  <Link to="/sign-up">Book a Session — It's Free</Link>
                 </Button>
               </div>
             </div>
