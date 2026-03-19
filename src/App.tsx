@@ -19,6 +19,8 @@ import TrainerProfilePage from './pages/trainer/Profile';
 import TrainerDiscovery from './pages/client/TrainerDiscovery';
 import TrainerProfile from './pages/client/TrainerProfile';
 import BookingFlow from './pages/client/BookingFlow';
+import OnboardingQuestions from './pages/client/OnboardingQuestions';
+import ClientProfilePage from './pages/client/ClientProfile';
 import SessionRoom from './pages/shared/SessionRoom';
 import { useAppUser } from './hooks/useAppUser';
 
@@ -96,7 +98,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home user={appUser} />} />
       <Route path="/sign-in" element={isSignedIn ? <Navigate to="/dashboard" /> : <SignInPage />} />
-      <Route path="/sign-up" element={isSignedIn ? <Navigate to="/dashboard" /> : <SignUpPage />} />
+      <Route path="/sign-up" element={isSignedIn ? <Navigate to="/onboarding" /> : <SignUpPage />} />
+      <Route path="/onboarding" element={isSignedIn ? <OnboardingQuestions /> : <Navigate to="/sign-up" />} />
       <Route path="/login" element={<Navigate to="/sign-in" replace />} />
 
       <Route
@@ -107,6 +110,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route path="/profile" element={<ProtectedRoute allowedRoles={['client']}><ClientProfilePage /></ProtectedRoute>} />
       <Route path="/session/:id" element={<ProtectedRoute><SessionRoom /></ProtectedRoute>} />
       <Route path="/trainers" element={<ProtectedRoute allowedRoles={['client']}><TrainerDiscovery /></ProtectedRoute>} />
       <Route path="/trainer/:id" element={<ProtectedRoute allowedRoles={['client']}><TrainerProfile /></ProtectedRoute>} />

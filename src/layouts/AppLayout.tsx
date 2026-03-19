@@ -266,10 +266,14 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
                       <p className="text-slate-500 text-xs mt-0.5">{user?.email}</p>
                     </div>
                     <div className="p-2">
-                      <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
+                      <Link
+                        to={userRole === 'trainer' ? '/trainer/profile' : '/profile'}
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                      >
                         <User className="w-4 h-4 text-slate-400" />
                         <span className="text-sm font-medium text-slate-700">View Profile</span>
-                      </button>
+                      </Link>
                       <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
                         <Settings className="w-4 h-4 text-slate-400" />
                         <span className="text-sm font-medium text-slate-700">Settings</span>

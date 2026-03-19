@@ -111,16 +111,21 @@ export default function Home({ user }: { user: User | null }) {
 
           <div className="flex items-center gap-3">
             {user ? (
-              <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
+              <>
+                <Button asChild variant="ghost" className="hidden sm:inline-flex h-10 text-sm font-semibold text-slate-600 hover:text-slate-900">
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
+                  <Link to="/trainers">Book a Session</Link>
+                </Button>
+              </>
             ) : (
               <>
                 <Button asChild variant="ghost" className="hidden sm:inline-flex h-10 text-sm font-semibold text-slate-600 hover:text-slate-900">
                   <Link to="/sign-in">Sign in</Link>
                 </Button>
                 <Button asChild className="rounded-full px-6 h-10 text-sm font-bold shadow-lg shadow-slate-900/10">
-                  <Link to="/sign-up">Get Started Free</Link>
+                  <Link to="/sign-up?intent=book">Book a Session</Link>
                 </Button>
               </>
             )}
