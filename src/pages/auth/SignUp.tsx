@@ -4,6 +4,25 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dumbbell, ArrowLeft, CircleCheck as CheckCircle2, Trophy, TrendingUp, Clock, Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Loader as Loader2 } from 'lucide-react';
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17.64 9.2045c0-.6381-.0573-1.2518-.1636-1.8409H9v3.4814h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2581h2.9086c1.7018-1.5668 2.6836-3.874 2.6836-6.615z" fill="#4285F4"/>
+      <path d="M9 18c2.43 0 4.4673-.806 5.9564-2.1805l-2.9086-2.2581c-.8064.54-1.8382.8618-3.0478.8618-2.3446 0-4.3282-1.5845-5.036-3.7104H.9574v2.3318C2.4382 15.9832 5.4818 18 9 18z" fill="#34A853"/>
+      <path d="M3.964 10.71c-.18-.54-.2823-1.1168-.2823-1.71s.1023-1.17.2823-1.71V4.9582H.9574C.3477 6.1731 0 7.5477 0 9s.3477 2.8269.9574 4.0418L3.964 10.71z" fill="#FBBC05"/>
+      <path d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.346l2.5813-2.5814C13.4632.8918 11.4259 0 9 0 5.4818 0 2.4382 2.0168.9574 4.9582L3.964 7.29C4.6718 5.1641 6.6554 3.5795 9 3.5795z" fill="#EA4335"/>
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 9C18 4.02944 13.9706 0 9 0C4.02944 0 0 4.02944 0 9C0 13.4921 3.29115 17.2155 7.59375 17.8907V11.6016H5.30859V9H7.59375V7.01719C7.59375 4.76156 8.93742 3.51563 10.9929 3.51563C11.977 3.51563 13.0078 3.69141 13.0078 3.69141V5.90625H11.873C10.755 5.90625 10.4063 6.60006 10.4063 7.3125V9H12.9023L12.5033 11.6016H10.4063V17.8907C14.7088 17.2155 18 13.4921 18 9Z" fill="#1877F2"/>
+    </svg>
+  );
+}
+
 const PERKS = [
   'Access to 500+ elite certified trainers',
   'Live 1:1 HD video training sessions',
@@ -186,6 +205,22 @@ export default function SignUpPage() {
   const [step, setStep] = useState<Step>('form');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'facebook' | null>(null);
+
+  const handleOAuth = async (provider: 'oauth_google' | 'oauth_facebook') => {
+    if (!isLoaded) return;
+    const key = provider === 'oauth_google' ? 'google' : 'facebook';
+    setOauthLoading(key);
+    try {
+      await signUp!.authenticateWithRedirect({
+        strategy: provider,
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/onboarding',
+      });
+    } catch {
+      setOauthLoading(null);
+    }
+  };
   const [verifying, setVerifying] = useState(false);
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
@@ -328,6 +363,41 @@ export default function SignUpPage() {
                       Sign in
                     </Link>
                   </p>
+                </div>
+
+                <div className="space-y-3 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => handleOAuth('oauth_google')}
+                    disabled={!!oauthLoading}
+                    className="h-12 w-full flex items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 font-semibold text-slate-700 text-sm transition-all hover:shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {oauthLoading === 'google' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    ) : (
+                      <GoogleIcon />
+                    )}
+                    Continue with Google
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleOAuth('oauth_facebook')}
+                    disabled={!!oauthLoading}
+                    className="h-12 w-full flex items-center justify-center gap-3 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 font-semibold text-slate-700 text-sm transition-all hover:shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {oauthLoading === 'facebook' ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                    ) : (
+                      <FacebookIcon />
+                    )}
+                    Continue with Facebook
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="flex-1 h-px bg-slate-200" />
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">or</span>
+                  <div className="flex-1 h-px bg-slate-200" />
                 </div>
 
                 {errors.general && (
