@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, ChevronRight, Heart, Activity, TriangleAlert as AlertTriangle, ShieldCheck, ClipboardList, Stethoscope, UserCheck } from 'lucide-react';
+import { Dumbbell, ChevronRight, Heart, Activity, TriangleAlert as AlertTriangle, ShieldCheck, ClipboardList, Stethoscope, UserCheck, CircleCheck as CheckCircle2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 
@@ -25,8 +25,6 @@ interface QuestionDef {
   note?: string;
   listLabel?: string;
   icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
 }
 
 const QUESTIONS: QuestionDef[] = [
@@ -35,16 +33,12 @@ const QUESTIONS: QuestionDef[] = [
     number: 1,
     question: 'Has your doctor ever said that you have a heart condition OR high blood pressure?',
     icon: Heart,
-    iconBg: 'bg-rose-50',
-    iconColor: 'text-rose-500',
   },
   {
     id: 'q2',
     number: 2,
     question: 'Do you feel pain in your chest at rest, during your daily activities of living, OR when you do physical activity?',
     icon: Activity,
-    iconBg: 'bg-orange-50',
-    iconColor: 'text-orange-500',
   },
   {
     id: 'q3',
@@ -52,8 +46,6 @@ const QUESTIONS: QuestionDef[] = [
     question: 'Do you lose balance because of dizziness OR have you lost consciousness in the last 12 months?',
     note: 'Please answer NO if your dizziness was associated with over-breathing (including during vigorous exercise).',
     icon: AlertTriangle,
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-500',
   },
   {
     id: 'q4',
@@ -61,8 +53,6 @@ const QUESTIONS: QuestionDef[] = [
     question: 'Have you ever been diagnosed with another chronic medical condition (other than heart disease or high blood pressure)?',
     listLabel: 'PLEASE LIST CONDITION(S) HERE:',
     icon: ClipboardList,
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-500',
   },
   {
     id: 'q5',
@@ -70,8 +60,6 @@ const QUESTIONS: QuestionDef[] = [
     question: 'Are you currently taking prescribed medications for a chronic medical condition?',
     listLabel: 'PLEASE LIST CONDITION(S) AND MEDICATIONS HERE:',
     icon: Stethoscope,
-    iconBg: 'bg-teal-50',
-    iconColor: 'text-teal-500',
   },
   {
     id: 'q6',
@@ -80,64 +68,49 @@ const QUESTIONS: QuestionDef[] = [
     note: 'Please answer NO if you had a problem in the past, but it does not limit your current ability to be physically active.',
     listLabel: 'PLEASE LIST CONDITION(S) HERE:',
     icon: ShieldCheck,
-    iconBg: 'bg-slate-100',
-    iconColor: 'text-slate-500',
   },
   {
     id: 'q7',
     number: 7,
     question: 'Has your doctor ever said that you should only do medically supervised physical activity?',
     icon: UserCheck,
-    iconBg: 'bg-emerald-50',
-    iconColor: 'text-emerald-500',
   },
 ];
 
-function RadioButton({
-  label,
-  selected,
-  variant,
-  onClick,
+function YesNoToggle({
+  value,
+  onChange,
 }: {
-  label: 'Yes' | 'No';
-  selected: boolean;
-  variant: 'yes' | 'no';
-  onClick: () => void;
+  value: boolean | null;
+  onChange: (v: boolean) => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'relative flex items-center gap-3 px-5 py-3 rounded-xl border-2 font-semibold text-sm transition-all duration-200 select-none',
-        selected && variant === 'yes'
-          ? 'border-rose-500 bg-rose-500 text-white shadow-md shadow-rose-200'
-          : selected && variant === 'no'
-            ? 'border-emerald-500 bg-emerald-500 text-white shadow-md shadow-emerald-200'
-            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-      )}
-    >
-      <span
+    <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1 gap-1">
+      <button
+        type="button"
+        onClick={() => onChange(true)}
         className={cn(
-          'w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all',
-          selected && variant === 'yes'
-            ? 'border-white bg-white'
-            : selected && variant === 'no'
-              ? 'border-white bg-white'
-              : 'border-slate-300 bg-white'
+          'px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 select-none',
+          value === true
+            ? 'bg-blue-600 text-white shadow-sm shadow-blue-200'
+            : 'text-slate-500 hover:text-slate-700 hover:bg-white'
         )}
       >
-        {selected && (
-          <span
-            className={cn(
-              'w-2 h-2 rounded-full',
-              variant === 'yes' ? 'bg-rose-500' : 'bg-emerald-500'
-            )}
-          />
+        Yes
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange(false)}
+        className={cn(
+          'px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 select-none',
+          value === false
+            ? 'bg-slate-700 text-white shadow-sm shadow-slate-200'
+            : 'text-slate-500 hover:text-slate-700 hover:bg-white'
         )}
-      </span>
-      {label}
-    </button>
+      >
+        No
+      </button>
+    </div>
   );
 }
 
@@ -151,23 +124,29 @@ function Checkbox({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer group">
+    <label
+      onClick={() => onChange(!checked)}
+      className={cn(
+        'flex items-center gap-2.5 cursor-pointer rounded-lg px-3 py-2.5 border transition-all duration-150 select-none',
+        checked
+          ? 'border-blue-200 bg-blue-50 text-blue-800'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+      )}
+    >
       <span
-        onClick={() => onChange(!checked)}
         className={cn(
-          'w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all duration-150',
-          checked
-            ? 'border-rose-500 bg-rose-500'
-            : 'border-slate-300 bg-white group-hover:border-rose-300'
+          'w-4.5 h-4.5 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+          checked ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
         )}
+        style={{ width: '18px', height: '18px' }}
       >
         {checked && (
-          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 12 12">
-            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+            <path d="M1.5 5l2.5 2.5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}
       </span>
-      <span className="text-sm font-medium text-slate-700 select-none">{label}</span>
+      <span className="text-sm font-semibold">{label}</span>
     </label>
   );
 }
@@ -176,7 +155,7 @@ export default function OnboardingQuestions() {
   const navigate = useNavigate();
   const [answers, setAnswers] = useState<Answers>({});
 
-  const answeredCount = Object.values(answers).filter(a => a.value !== null).length;
+  const answeredCount = Object.values(answers).filter(a => a.value !== null && a.value !== undefined).length;
   const allAnswered = answeredCount === QUESTIONS.length;
   const hasYes = Object.values(answers).some(a => a.value === true);
 
@@ -193,10 +172,7 @@ export default function OnboardingQuestions() {
   }
 
   function setDetail(id: string, text: string) {
-    setAnswers(prev => ({
-      ...prev,
-      [id]: { ...prev[id], detail: text },
-    }));
+    setAnswers(prev => ({ ...prev, [id]: { ...prev[id], detail: text } }));
   }
 
   function setSubCheck(id: string, checkId: string, checked: boolean) {
@@ -212,148 +188,172 @@ export default function OnboardingQuestions() {
   const progress = (answeredCount / QUESTIONS.length) * 100;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-100 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      {/* Sticky header */}
+      <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="bg-slate-900 p-1.5 rounded-xl">
               <Dumbbell className="text-accent w-4 h-4" />
             </div>
-            <span className="text-lg font-black tracking-tighter text-slate-900">FlexFit</span>
+            <span className="text-base font-black tracking-tighter text-slate-900">FlexFit</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-slate-400 tabular-nums">
-              {answeredCount}/{QUESTIONS.length} answered
+          <div className="flex items-center gap-4">
+            {/* Dot progress */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              {QUESTIONS.map(q => {
+                const ans = answers[q.id];
+                const done = ans?.value !== null && ans?.value !== undefined;
+                const yes = ans?.value === true;
+                return (
+                  <span
+                    key={q.id}
+                    className={cn(
+                      'w-2 h-2 rounded-full transition-all duration-300',
+                      done && yes ? 'bg-blue-500 scale-110' : done ? 'bg-emerald-400 scale-110' : 'bg-slate-200'
+                    )}
+                  />
+                );
+              })}
+            </div>
+            <span className="text-xs font-bold text-slate-400 tabular-nums">
+              {answeredCount}/{QUESTIONS.length}
             </span>
             <button
               onClick={() => navigate('/calendar')}
-              className="text-sm font-semibold text-slate-400 hover:text-slate-700 transition-colors px-3 py-1.5 rounded-xl hover:bg-slate-100 flex items-center gap-1"
+              className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-slate-100 flex items-center gap-1"
             >
-              Skip
-              <ChevronRight className="w-3.5 h-3.5" />
+              Skip <ChevronRight className="w-3 h-3" />
             </button>
           </div>
         </div>
-        {/* Progress bar */}
-        <div className="h-[3px] bg-slate-100">
+        <div className="h-[2px] bg-slate-100">
           <motion.div
-            className="h-full bg-gradient-to-r from-slate-700 to-slate-900"
+            className="h-full bg-blue-500"
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.4, ease: 'easeOut' }}
           />
         </div>
       </header>
 
-      <main className="flex-1 max-w-2xl mx-auto w-full px-4 sm:px-6 py-10 pb-16">
-        {/* Title block */}
+      <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-12">
+        {/* Compact hero */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-10"
+          transition={{ duration: 0.4 }}
+          className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4"
         >
-          <div className="inline-flex items-center gap-2 bg-rose-50 border border-rose-100 text-rose-600 text-[11px] font-black uppercase tracking-[0.18em] px-3 py-1.5 rounded-full mb-5">
-            <Heart className="w-3 h-3" />
-            Health Screening Required
+          <div>
+            <div className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-100 text-blue-600 text-[10.5px] font-black uppercase tracking-[0.16em] px-2.5 py-1 rounded-full mb-3">
+              <Heart className="w-2.5 h-2.5" />
+              PAR-Q+ Health Screening
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+              Physical Activity Readiness
+            </h1>
+            <p className="text-sm text-slate-500 font-medium mt-1">
+              Answer all 7 questions honestly — takes under 2 minutes.
+            </p>
           </div>
-          <h1 className="text-3xl sm:text-[2.1rem] font-black text-slate-900 tracking-tight leading-tight mb-2">
-            PAR-Q+
-          </h1>
-          <p className="text-base font-semibold text-slate-700 mb-2">
-            The Physical Activity Readiness Questionnaire for Everyone
-          </p>
-          <p className="text-sm text-slate-500 font-medium leading-relaxed max-w-lg">
-            Please read each question carefully and answer honestly. This information helps ensure your safety and allows your trainer to personalise your programme appropriately.
-          </p>
+          {allAnswered && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-bold px-4 py-2.5 rounded-xl shrink-0"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              All questions answered
+            </motion.div>
+          )}
         </motion.div>
 
-        {/* Questions */}
-        <div className="space-y-4 mb-8">
+        {/* Questions grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
           {QUESTIONS.map((q, i) => {
             const ans = answers[q.id];
-            const answered = ans?.value !== undefined && ans?.value !== null;
+            const answered = ans?.value !== null && ans?.value !== undefined;
             const isYes = ans?.value === true;
             const isNo = ans?.value === false;
             const Icon = q.icon;
+            const hasExtra = (q.id === 'q1' && isYes) || (!!q.listLabel && isYes);
 
             return (
               <motion.div
                 key={q.id}
-                initial={{ opacity: 0, y: 18 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.055, duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                transition={{ delay: i * 0.045, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                 className={cn(
-                  'bg-white rounded-2xl border transition-all duration-300',
+                  'bg-white rounded-2xl border transition-all duration-250',
+                  hasExtra ? 'lg:col-span-2' : '',
                   answered && isYes
-                    ? 'border-rose-200 shadow-sm'
+                    ? 'border-blue-200'
                     : answered && isNo
-                      ? 'border-emerald-200 shadow-sm'
-                      : 'border-slate-200/80 shadow-sm hover:border-slate-300'
+                      ? 'border-emerald-200'
+                      : 'border-slate-200 hover:border-slate-300'
                 )}
               >
-                <div className="p-6">
-                  {/* Question header */}
-                  <div className="flex items-start gap-4 mb-5">
-                    <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0 mt-0.5', q.iconBg)}>
-                      <Icon className={cn('w-4.5 h-4.5', q.iconColor)} style={{ width: '18px', height: '18px' }} />
+                <div className="p-4 sm:p-5">
+                  {/* Number + icon row */}
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className={cn(
+                      'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-colors',
+                      answered && isYes
+                        ? 'bg-blue-600 text-white'
+                        : answered && isNo
+                          ? 'bg-emerald-500 text-white'
+                          : 'bg-slate-100 text-slate-500'
+                    )}>
+                      {answered ? (
+                        isYes ? <Icon style={{ width: '14px', height: '14px' }} /> : <span>✓</span>
+                      ) : (
+                        <span>{q.number}</span>
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest">
-                          Question {q.number}
-                        </span>
-                        {answered && (
-                          <span className={cn(
-                            'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full',
-                            isYes ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-600'
-                          )}>
-                            {isYes ? 'Yes' : 'No'}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-slate-800 font-semibold text-[14.5px] leading-relaxed">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">
+                        Question {q.number}
+                      </p>
+                      <p className="text-slate-800 font-semibold text-[13.5px] leading-snug">
                         {q.question}
                       </p>
                       {q.note && (
-                        <p className="text-slate-400 text-[12.5px] font-medium mt-2 leading-relaxed pl-3 border-l-2 border-slate-200">
+                        <p className="text-slate-400 text-[11.5px] font-medium mt-1.5 leading-relaxed italic">
                           {q.note}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  {/* Radio buttons */}
-                  <div className="flex items-center gap-3 ml-14">
-                    <RadioButton
-                      label="Yes"
-                      variant="yes"
-                      selected={isYes}
-                      onClick={() => setYesNo(q.id, true)}
-                    />
-                    <RadioButton
-                      label="No"
-                      variant="no"
-                      selected={isNo}
-                      onClick={() => setYesNo(q.id, false)}
-                    />
+                  {/* Yes / No toggle */}
+                  <div className="flex items-center justify-between">
+                    <YesNoToggle value={ans?.value ?? null} onChange={v => setYesNo(q.id, v)} />
+                    {answered && (
+                      <span className={cn(
+                        'text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full',
+                        isYes ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
+                      )}>
+                        {isYes ? 'Yes — flagged' : 'No — clear'}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Q1 only: conditional checkboxes */}
+                  {/* Q1: heart condition checkboxes */}
                   <AnimatePresence>
                     {q.id === 'q1' && isYes && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                        animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
-                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.22 }}
                         className="overflow-hidden"
                       >
-                        <div className="ml-14 bg-rose-50/60 border border-rose-100 rounded-xl p-4">
-                          <p className="text-xs font-black text-rose-500 uppercase tracking-widest mb-3">
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <p className="text-[10.5px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
                             Please select all that apply:
                           </p>
-                          <div className="space-y-2.5">
+                          <div className="flex flex-wrap gap-2">
                             {HEART_CONDITIONS.map(c => (
                               <Checkbox
                                 key={c.id}
@@ -368,29 +368,29 @@ export default function OnboardingQuestions() {
                     )}
                   </AnimatePresence>
 
-                  {/* Questions with listLabel: show textarea when Yes */}
+                  {/* Condition text box */}
                   <AnimatePresence>
                     {q.listLabel && isYes && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                        animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
-                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.22 }}
                         className="overflow-hidden"
                       >
-                        <div className="ml-14">
-                          <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                        <div className="mt-4 pt-4 border-t border-slate-100">
+                          <label className="block text-[10.5px] font-black text-slate-400 uppercase tracking-widest mb-2">
                             {q.listLabel}
                           </label>
                           <textarea
                             value={ans?.detail || ''}
                             onChange={e => setDetail(q.id, e.target.value)}
-                            placeholder="Please describe your condition(s) here…"
-                            rows={3}
+                            placeholder="Describe your condition(s)…"
+                            rows={2}
                             className={cn(
-                              'w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3',
+                              'w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5',
                               'text-sm font-medium text-slate-800 placeholder:text-slate-300',
-                              'focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400',
+                              'focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300',
                               'transition-colors duration-150 leading-relaxed'
                             )}
                           />
@@ -404,37 +404,37 @@ export default function OnboardingQuestions() {
           })}
         </div>
 
-        {/* Warning banner */}
+        {/* Medical warning */}
         <AnimatePresence>
           {hasYes && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              transition={{ duration: 0.35 }}
-              className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 flex gap-4"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex gap-3.5 items-start"
             >
-              <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
+              <div className="w-8 h-8 bg-amber-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
               </div>
               <div>
-                <p className="font-bold text-amber-900 text-sm mb-1">Medical clearance recommended</p>
-                <p className="text-amber-700 text-[13px] font-medium leading-relaxed">
-                  You have answered "Yes" to one or more questions. We recommend consulting your doctor before starting or changing your physical activity programme. Your trainer will also review your responses to tailor sessions appropriately.
+                <p className="font-bold text-amber-900 text-sm">Medical clearance recommended</p>
+                <p className="text-amber-700 text-xs font-medium leading-relaxed mt-0.5">
+                  You answered "Yes" to one or more questions. We recommend consulting your doctor before starting a new programme. Your trainer will review your responses to personalise sessions appropriately.
                 </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Submit */}
+        {/* CTA row */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <Button
             onClick={() => navigate('/calendar')}
             disabled={!allAnswered}
             className={cn(
-              'w-full sm:w-auto rounded-xl h-12 px-8 font-bold gap-2',
-              'shadow-lg shadow-slate-900/10 disabled:opacity-40 disabled:cursor-not-allowed',
+              'w-full sm:w-auto rounded-xl h-11 px-8 font-bold gap-2 text-sm',
+              'shadow-md shadow-blue-900/10 disabled:opacity-35 disabled:cursor-not-allowed',
               'transition-all duration-200'
             )}
           >
@@ -449,8 +449,8 @@ export default function OnboardingQuestions() {
           </button>
         </div>
 
-        <p className="text-xs text-slate-400 font-medium mt-6 text-center">
-          Your answers are kept strictly confidential and used only for safety assessment purposes.
+        <p className="text-[11px] text-slate-400 font-medium mt-5 text-center">
+          Your answers are kept strictly confidential and used solely for safety assessment purposes.
         </p>
       </main>
     </div>
