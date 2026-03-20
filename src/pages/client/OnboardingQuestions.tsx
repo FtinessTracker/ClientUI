@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Dumbbell, ChevronRight, Heart, Activity, TriangleAlert as AlertTriangle, ShieldCheck, ClipboardList, Stethoscope, UserCheck, CircleCheck as CheckCircle2 } from 'lucide-react';
+import { Dumbbell, ChevronRight, Heart, Activity, TriangleAlert as AlertTriangle, ShieldCheck, ClipboardList, Stethoscope, UserCheck, CircleCheck as CheckCircle2, Loader as Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+import { useAppUser } from '../../hooks/useAppUser';
 
 interface QuestionAnswer {
   value: boolean | null;
@@ -14,34 +15,43 @@ interface QuestionAnswer {
 type Answers = Record<string, QuestionAnswer>;
 
 const HEART_CONDITIONS = [
-  { id: 'heart_condition', label: 'Heart condition' },
-  { id: 'high_blood_pressure', label: 'High blood pressure' },
+  { id: 'Q_1', title: 'HEART_ATTACK', label: 'Heart condition' },
+  { id: 'Q_2', title: 'HIGHBLOOD_PRESSURE', label: 'High blood pressure' },
 ];
 
 interface QuestionDef {
   id: string;
+  apiId: string;
+  apiTitle: string;
   number: number;
   question: string;
   note?: string;
   listLabel?: string;
+  hasComments?: boolean;
   icon: React.ElementType;
 }
 
 const QUESTIONS: QuestionDef[] = [
   {
     id: 'q1',
+    apiId: 'Q1',
+    apiTitle: 'CDN_HRT_HBP',
     number: 1,
     question: 'Has your doctor ever said that you have a heart condition OR high blood pressure?',
     icon: Heart,
   },
   {
     id: 'q2',
+    apiId: 'Q2',
+    apiTitle: 'CHEST',
     number: 2,
     question: 'Do you feel pain in your chest at rest, during your daily activities of living, OR when you do physical activity?',
     icon: Activity,
   },
   {
     id: 'q3',
+    apiId: 'Q3',
+    apiTitle: 'DIZZINESS',
     number: 3,
     question: 'Do you lose balance because of dizziness OR have you lost consciousness in the last 12 months?',
     note: 'Please answer NO if your dizziness was associated with over-breathing (including during vigorous exercise).',
@@ -49,33 +59,82 @@ const QUESTIONS: QuestionDef[] = [
   },
   {
     id: 'q4',
+    apiId: 'Q4',
+    apiTitle: 'CHRONIC_CONDITION',
     number: 4,
     question: 'Have you ever been diagnosed with another chronic medical condition (other than heart disease or high blood pressure)?',
     listLabel: 'PLEASE LIST CONDITION(S) HERE:',
+    hasComments: true,
     icon: ClipboardList,
   },
   {
     id: 'q5',
+    apiId: 'Q5',
+    apiTitle: 'MEDICATIONS',
     number: 5,
     question: 'Are you currently taking prescribed medications for a chronic medical condition?',
     listLabel: 'PLEASE LIST CONDITION(S) AND MEDICATIONS HERE:',
+    hasComments: true,
     icon: Stethoscope,
   },
   {
     id: 'q6',
+    apiId: 'Q6',
+    apiTitle: 'BONE_JOINT',
     number: 6,
     question: 'Do you currently have (or have had within the past 12 months) a bone, joint, or soft tissue (muscle, ligament, or tendon) problem that could be made worse by becoming more physically active?',
     note: 'Please answer NO if you had a problem in the past, but it does not limit your current ability to be physically active.',
     listLabel: 'PLEASE LIST CONDITION(S) HERE:',
+    hasComments: true,
     icon: ShieldCheck,
   },
   {
     id: 'q7',
+    apiId: 'Q7',
+    apiTitle: 'MEDICAL_SUPERVISION',
     number: 7,
     question: 'Has your doctor ever said that you should only do medically supervised physical activity?',
     icon: UserCheck,
   },
 ];
+
+function buildPayload(userId: string, answers: Answers) {
+  const qstnAnswers: Array<{ questionId: string; questionTitle: string; answer: boolean; comments: string }> = [];
+
+  for (const q of QUESTIONS) {
+    const ans = answers[q.id];
+    if (ans === undefined || ans.value === null) continue;
+
+    if (q.id === 'q1') {
+      qstnAnswers.push({
+        questionId: q.apiId,
+        questionTitle: q.apiTitle,
+        answer: ans.value,
+        comments: '',
+      });
+
+      if (ans.value) {
+        for (const cond of HEART_CONDITIONS) {
+          qstnAnswers.push({
+            questionId: cond.id,
+            questionTitle: cond.title,
+            answer: !!ans.subChecks?.[cond.id],
+            comments: '',
+          });
+        }
+      }
+    } else {
+      qstnAnswers.push({
+        questionId: q.apiId,
+        questionTitle: q.apiTitle,
+        answer: ans.value,
+        comments: q.hasComments && ans.value ? (ans.detail || '') : '',
+      });
+    }
+  }
+
+  return { userId, qstnAnswers };
+}
 
 function YesNoToggle({
   value,
@@ -135,7 +194,7 @@ function Checkbox({
     >
       <span
         className={cn(
-          'w-4.5 h-4.5 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+          'rounded border-2 flex items-center justify-center shrink-0 transition-all',
           checked ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
         )}
         style={{ width: '18px', height: '18px' }}
@@ -153,7 +212,10 @@ function Checkbox({
 
 export default function OnboardingQuestions() {
   const navigate = useNavigate();
+  const { appUser } = useAppUser();
   const [answers, setAnswers] = useState<Answers>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const answeredCount = Object.values(answers).filter(a => a.value !== null && a.value !== undefined).length;
   const allAnswered = answeredCount === QUESTIONS.length;
@@ -185,21 +247,47 @@ export default function OnboardingQuestions() {
     }));
   }
 
+  async function handleContinue() {
+    if (!allAnswered) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const userId = appUser?.id || '';
+    const payload = buildPayload(userId, answers);
+
+    try {
+      const res = await fetch('http://localhost:8080/api/client/update-questionnaire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server responded with ${res.status}`);
+      }
+
+      navigate('/calendar');
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const progress = (answeredCount / QUESTIONS.length) * 100;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
-      {/* Sticky header */}
       <header className="bg-white border-b border-slate-100 sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="bg-slate-900 p-1.5 rounded-xl">
-              <Dumbbell className="text-accent w-4 h-4" />
+              <Dumbbell className="text-emerald-400 w-4 h-4" />
             </div>
             <span className="text-base font-black tracking-tighter text-slate-900">FlexFit</span>
           </div>
           <div className="flex items-center gap-4">
-            {/* Dot progress */}
             <div className="hidden sm:flex items-center gap-1.5">
               {QUESTIONS.map(q => {
                 const ans = answers[q.id];
@@ -237,7 +325,6 @@ export default function OnboardingQuestions() {
       </header>
 
       <main className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-8 pb-12">
-        {/* Compact hero */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -268,7 +355,6 @@ export default function OnboardingQuestions() {
           )}
         </motion.div>
 
-        {/* Questions grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
           {QUESTIONS.map((q, i) => {
             const ans = answers[q.id];
@@ -295,7 +381,6 @@ export default function OnboardingQuestions() {
                 )}
               >
                 <div className="p-4 sm:p-5">
-                  {/* Number + icon row */}
                   <div className="flex items-start gap-3 mb-4">
                     <div className={cn(
                       'w-8 h-8 rounded-xl flex items-center justify-center shrink-0 font-black text-xs transition-colors',
@@ -326,7 +411,6 @@ export default function OnboardingQuestions() {
                     </div>
                   </div>
 
-                  {/* Yes / No toggle */}
                   <div className="flex items-center justify-between">
                     <YesNoToggle value={ans?.value ?? null} onChange={v => setYesNo(q.id, v)} />
                     {answered && (
@@ -339,7 +423,6 @@ export default function OnboardingQuestions() {
                     )}
                   </div>
 
-                  {/* Q1: heart condition checkboxes */}
                   <AnimatePresence>
                     {q.id === 'q1' && isYes && (
                       <motion.div
@@ -368,7 +451,6 @@ export default function OnboardingQuestions() {
                     )}
                   </AnimatePresence>
 
-                  {/* Condition text box */}
                   <AnimatePresence>
                     {q.listLabel && isYes && (
                       <motion.div
@@ -404,7 +486,6 @@ export default function OnboardingQuestions() {
           })}
         </div>
 
-        {/* Medical warning */}
         <AnimatePresence>
           {hasYes && (
             <motion.div
@@ -427,19 +508,41 @@ export default function OnboardingQuestions() {
           )}
         </AnimatePresence>
 
-        {/* CTA row */}
+        <AnimatePresence>
+          {submitError && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mb-4 bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-center gap-2"
+            >
+              <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              <p className="text-red-700 text-sm font-medium">{submitError}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <Button
-            onClick={() => navigate('/calendar')}
-            disabled={!allAnswered}
+            onClick={handleContinue}
+            disabled={!allAnswered || submitting}
             className={cn(
               'w-full sm:w-auto rounded-xl h-11 px-8 font-bold gap-2 text-sm',
               'shadow-md shadow-blue-900/10 disabled:opacity-35 disabled:cursor-not-allowed',
               'transition-all duration-200'
             )}
           >
-            Continue to Calendar
-            <ChevronRight className="w-4 h-4" />
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving…
+              </>
+            ) : (
+              <>
+                Continue to Calendar
+                <ChevronRight className="w-4 h-4" />
+              </>
+            )}
           </Button>
           <button
             onClick={() => navigate('/calendar')}
