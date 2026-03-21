@@ -44,7 +44,7 @@ export default function SignInPage() {
             <div className="bg-accent p-2.5 rounded-xl shadow-xl shadow-accent/30 group-hover:shadow-accent/50 group-hover:scale-105 transition-all duration-300">
               <Dumbbell className="text-white w-5 h-5" />
             </div>
-            <span className="text-xl font-black tracking-tighter text-white">FlexFit</span>
+            <span className="text-xl font-black tracking-tighter text-white">TrainLiv</span>
           </Link>
 
           <div className="flex-1 flex flex-col justify-center max-w-lg mt-16">
@@ -104,7 +104,7 @@ export default function SignInPage() {
                 {[1,2,3,4,5].map(i => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-current" />)}
               </div>
               <p className="text-slate-400 text-sm leading-relaxed italic">
-                "FlexFit completely transformed my training. Having a world-class coach in my living room is unreal."
+                "TrainLiv completely transformed my training. Having a world-class coach in my living room is unreal."
               </p>
               <div className="flex items-center gap-3 mt-4">
                 <img
@@ -129,7 +129,7 @@ export default function SignInPage() {
             <div className="bg-slate-900 p-2 rounded-xl">
               <Dumbbell className="text-accent w-4 h-4" />
             </div>
-            <span className="text-lg font-black tracking-tighter text-slate-900">FlexFit</span>
+            <span className="text-lg font-black tracking-tighter text-slate-900">TrainLiv</span>
           </Link>
         </div>
 
@@ -224,7 +224,7 @@ export default function SignInPage() {
             </div>
 
             <p className="text-center text-slate-400 text-[11px] mt-8 leading-relaxed">
-              By signing in you agree to FlexFit's{' '}
+              By signing in you agree to TrainLiv's{' '}
               <a href="#" className="underline hover:text-slate-600 transition-colors">Terms of Service</a>
               {' '}and{' '}
               <a href="#" className="underline hover:text-slate-600 transition-colors">Privacy Policy</a>.

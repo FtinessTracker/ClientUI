@@ -41,7 +41,7 @@ const TRAINER_CARDS = [
 
 const TESTIMONIALS = [
   {
-    quote: 'FlexFit completely transformed my approach to fitness. Having a dedicated coach available on my schedule changed everything. Down 22 lbs in 3 months.',
+    quote: 'TrainLiv completely transformed my approach to fitness. Having a dedicated coach available on my schedule changed everything. Down 22 lbs in 3 months.',
     name: 'Alexandra Wright',
     title: 'Creative Director, NYC',
     image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200',
@@ -89,7 +89,7 @@ export default function Home({ user }: { user: User | null }) {
             <div className="bg-slate-900 p-2 rounded-xl shadow-lg shadow-slate-900/15">
               <Dumbbell className="text-accent w-5 h-5" />
             </div>
-            <span className="text-xl font-black tracking-tighter text-slate-900">FlexFit</span>
+            <span className="text-xl font-black tracking-tighter text-slate-900">TrainLiv</span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -299,7 +299,7 @@ export default function Home({ user }: { user: User | null }) {
       <section className="py-32 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center mb-20">
-            <p className="text-accent text-xs font-black uppercase tracking-[0.25em] mb-4">Why FlexFit</p>
+            <p className="text-accent text-xs font-black uppercase tracking-[0.25em] mb-4">Why TrainLiv</p>
             <h2 className="text-4xl lg:text-6xl font-black tracking-tighter text-slate-900 mb-5">
               The future of personal training.
             </h2>
@@ -636,7 +636,7 @@ export default function Home({ user }: { user: User | null }) {
                 Ready to meet<br />your best self?
               </h2>
               <p className="text-white/50 text-xl max-w-2xl mx-auto mb-12 font-medium leading-relaxed">
-                Join thousands who have already transformed their fitness with FlexFit. Your first session is 50% off.
+                Join thousands who have already transformed their fitness with TrainLiv. Your first session is 50% off.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild size="lg" className="h-14 px-12 rounded-full bg-accent hover:bg-accent/90 text-white font-bold text-base shadow-2xl shadow-accent/25">
@@ -657,7 +657,7 @@ export default function Home({ user }: { user: User | null }) {
                 <div className="bg-slate-900 p-2 rounded-xl">
                   <Dumbbell className="text-accent w-5 h-5" />
                 </div>
-                <span className="text-xl font-black tracking-tighter text-slate-900">FlexFit</span>
+                <span className="text-xl font-black tracking-tighter text-slate-900">TrainLiv</span>
               </div>
               <p className="text-slate-400 text-base leading-relaxed mb-6 font-medium">
                 The premier platform for elite personal training. Expert-led sessions, anywhere in the world.
@@ -692,7 +692,7 @@ export default function Home({ user }: { user: User | null }) {
           </div>
 
           <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row justify-between items-center gap-4 text-slate-400 text-sm font-medium">
-            <p>© 2026 FlexFit Inc. All rights reserved.</p>
+            <p>© 2026 TrainLiv Inc. All rights reserved.</p>
             <div className="flex gap-6">
               {['Status', 'Security', 'Sitemap'].map((l) => (
                 <a key={l} href="#" className="hover:text-slate-900 transition-colors">{l}</a>

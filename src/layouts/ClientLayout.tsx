@@ -79,7 +79,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 <div className="bg-slate-900 p-1.5 rounded-xl transition-transform group-hover:scale-105 duration-200">
                   <Dumbbell className="text-accent w-4 h-4" />
                 </div>
-                <span className="text-lg font-black tracking-tighter text-slate-900">FlexFit</span>
+                <span className="text-lg font-black tracking-tighter text-slate-900">TrainLiv</span>
               </Link>
 
               <nav className="hidden md:flex items-center h-[62px]">

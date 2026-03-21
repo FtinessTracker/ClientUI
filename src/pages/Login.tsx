@@ -70,7 +70,7 @@ export default function Login() {
             <div className="bg-accent p-3 rounded-2xl shadow-2xl shadow-accent/20">
               <Dumbbell className="text-accent-foreground w-8 h-8" />
             </div>
-            <span className="text-3xl font-black tracking-tighter text-white">FlexFit</span>
+            <span className="text-3xl font-black tracking-tighter text-white">TrainLiv</span>
           </div>
 
           <div className="space-y-6 max-w-lg">
@@ -199,7 +199,7 @@ export default function Login() {
 
           <div className="pt-10 border-t border-slate-100 text-center">
             <p className="text-slate-500 font-medium">
-              New to FlexFit?{' '}
+              New to TrainLiv?{' '}
               <a href="#" className="font-black text-primary hover:underline uppercase tracking-widest text-xs ml-1">Create Account</a>
             </p>
           </div>

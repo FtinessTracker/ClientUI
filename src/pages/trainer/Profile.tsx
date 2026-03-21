@@ -89,7 +89,7 @@ export default function TrainerProfile() {
       >
         <div>
           <h1 className="text-3xl font-black tracking-tighter text-slate-900">My Profile</h1>
-          <p className="text-slate-400 font-medium mt-1">How clients see you on FlexFit</p>
+          <p className="text-slate-400 font-medium mt-1">How clients see you on TrainLiv</p>
         </div>
         <div className="flex items-center gap-2">
           <div className={cn(

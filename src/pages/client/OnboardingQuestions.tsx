@@ -285,7 +285,7 @@ export default function OnboardingQuestions() {
             <div className="bg-slate-900 p-1.5 rounded-xl">
               <Dumbbell className="text-emerald-400 w-4 h-4" />
             </div>
-            <span className="text-base font-black tracking-tighter text-slate-900">FlexFit</span>
+            <span className="text-base font-black tracking-tighter text-slate-900">TrainLiv</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex items-center gap-1.5">

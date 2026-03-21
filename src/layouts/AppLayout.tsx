@@ -90,7 +90,7 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
             <div className="bg-accent p-2 rounded-xl shadow-lg shadow-accent/25">
               <Dumbbell className="text-white w-5 h-5" />
             </div>
-            <span className="text-2xl font-extrabold tracking-tighter">FlexFit</span>
+            <span className="text-2xl font-extrabold tracking-tighter">TrainLiv</span>
           </div>
           <button
             className="lg:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors"

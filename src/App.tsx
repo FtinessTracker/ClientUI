@@ -50,7 +50,7 @@ function LoadingScreen() {
           <Dumbbell className="text-accent w-7 h-7" />
         </motion.div>
         <div className="text-center">
-          <p className="text-slate-900 font-black text-xl tracking-tighter">FlexFit</p>
+          <p className="text-slate-900 font-black text-xl tracking-tighter">TrainLiv</p>
           <p className="text-slate-400 text-sm font-medium mt-1">Loading...</p>
         </div>
         <div className="flex gap-1.5">

@@ -1,5 +1,5 @@
 {
-  "name": "FlexFit - Expert Trainer Booking",
+  "name": "TrainLiv - Expert Trainer Booking",
   "description": "A premium platform for booking 1:1 fitness training sessions with verified professionals.",
   "requestFramePermissions": ["camera", "microphone"]
 }
