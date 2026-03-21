@@ -107,10 +107,7 @@ export default function TrainerOnboarding() {
           className="text-center mb-10"
         >
           <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="bg-accent p-2.5 rounded-2xl shadow-lg shadow-accent/30">
-              <Dumbbell className="text-white w-6 h-6" />
-            </div>
-            <span className="text-white text-2xl font-black tracking-tighter">TrainLiv</span>
+            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-10 w-auto" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight mb-2">Set Up Your Trainer Profile</h1>
           <p className="text-slate-400 font-medium">Let clients discover you in under 3 minutes</p>

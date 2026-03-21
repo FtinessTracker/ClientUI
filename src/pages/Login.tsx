@@ -67,10 +67,7 @@ export default function Login() {
         
         <div className="relative z-10 p-20 flex flex-col justify-between h-full w-full">
           <div className="flex items-center gap-3">
-            <div className="bg-accent p-3 rounded-2xl shadow-2xl shadow-accent/20">
-              <Dumbbell className="text-accent-foreground w-8 h-8" />
-            </div>
-            <span className="text-3xl font-black tracking-tighter text-white">TrainLiv</span>
+            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-12 w-auto" />
           </div>
 
           <div className="space-y-6 max-w-lg">

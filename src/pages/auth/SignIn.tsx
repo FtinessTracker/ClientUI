@@ -41,10 +41,7 @@ export default function SignInPage() {
 
         <div className="relative z-10 flex flex-col h-full p-12 xl:p-16">
           <Link to="/" className="flex items-center gap-3 group w-fit">
-            <div className="bg-accent p-2.5 rounded-xl shadow-xl shadow-accent/30 group-hover:shadow-accent/50 group-hover:scale-105 transition-all duration-300">
-              <Dumbbell className="text-white w-5 h-5" />
-            </div>
-            <span className="text-xl font-black tracking-tighter text-white">TrainLiv</span>
+            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-10 w-auto" />
           </Link>
 
           <div className="flex-1 flex flex-col justify-center max-w-lg mt-16">
@@ -126,10 +123,7 @@ export default function SignInPage() {
 
         <div className="lg:hidden flex items-center justify-between px-6 pt-6 pb-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="bg-slate-900 p-2 rounded-xl">
-              <Dumbbell className="text-accent w-4 h-4" />
-            </div>
-            <span className="text-lg font-black tracking-tighter text-slate-900">TrainLiv</span>
+            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-8 w-auto" />
           </Link>
         </div>
 
