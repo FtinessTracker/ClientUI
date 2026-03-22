@@ -86,7 +86,10 @@ export default function Home({ user }: { user: User | null }) {
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/Logo_(2).png" alt="TrainLiv" className="h-10 w-auto" />
+            <div className="bg-slate-900 p-2 rounded-xl shadow-lg shadow-slate-900/15">
+              <Dumbbell className="text-accent w-5 h-5" />
+            </div>
+            <span className="text-xl font-black tracking-tighter text-slate-900">TrainLiv</span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -651,7 +654,10 @@ export default function Home({ user }: { user: User | null }) {
           <div className="grid md:grid-cols-12 gap-16 mb-16">
             <div className="md:col-span-4">
               <div className="flex items-center gap-2.5 mb-6">
-                <img src="/Logo_(2).png" alt="TrainLiv" className="h-10 w-auto" />
+                <div className="bg-slate-900 p-2 rounded-xl">
+                  <Dumbbell className="text-accent w-5 h-5" />
+                </div>
+                <span className="text-xl font-black tracking-tighter text-slate-900">TrainLiv</span>
               </div>
               <p className="text-slate-400 text-base leading-relaxed mb-6 font-medium">
                 The premier platform for elite personal training. Expert-led sessions, anywhere in the world.

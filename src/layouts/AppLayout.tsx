@@ -87,7 +87,10 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
         {/* Brand */}
         <div className="p-7 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/Logo_(2).png" alt="TrainLiv" className="h-10 w-auto" />
+            <div className="bg-accent p-2 rounded-xl shadow-lg shadow-accent/25">
+              <Dumbbell className="text-white w-5 h-5" />
+            </div>
+            <span className="text-2xl font-extrabold tracking-tighter">TrainLiv</span>
           </div>
           <button
             className="lg:hidden p-1.5 hover:bg-white/10 rounded-lg transition-colors"

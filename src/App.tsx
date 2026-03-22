@@ -42,8 +42,15 @@ function LoadingScreen() {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center gap-5"
       >
-        <img src="/Logo_(2).png" alt="TrainLiv" className="h-16 w-auto" />
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+          className="w-14 h-14 rounded-2xl bg-slate-900 flex items-center justify-center shadow-2xl shadow-slate-900/20"
+        >
+          <Dumbbell className="text-accent w-7 h-7" />
+        </motion.div>
         <div className="text-center">
+          <p className="text-slate-900 font-black text-xl tracking-tighter">TrainLiv</p>
           <p className="text-slate-400 text-sm font-medium mt-1">Loading...</p>
         </div>
         <div className="flex gap-1.5">
