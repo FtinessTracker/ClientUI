@@ -67,7 +67,7 @@ export default function Login() {
         
         <div className="relative z-10 p-20 flex flex-col justify-between h-full w-full">
           <div className="flex items-center gap-3">
-            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-12 w-auto" />
+            <img src="/Logo_(2).png" alt="TrainLiv" className="h-12 w-auto" />
           </div>
 
           <div className="space-y-6 max-w-lg">

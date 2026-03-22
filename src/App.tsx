@@ -42,7 +42,7 @@ function LoadingScreen() {
         animate={{ opacity: 1, scale: 1 }}
         className="flex flex-col items-center gap-5"
       >
-        <img src="/trainlivlogo.png" alt="TrainLiv" className="h-16 w-auto" />
+        <img src="/Logo_(2).png" alt="TrainLiv" className="h-16 w-auto" />
         <div className="text-center">
           <p className="text-slate-400 text-sm font-medium mt-1">Loading...</p>
         </div>

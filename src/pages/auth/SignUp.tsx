@@ -83,7 +83,7 @@ function LeftPanel() {
 
       <div className="relative z-10 flex flex-col h-full p-12 xl:p-16">
         <Link to="/" className="flex items-center gap-3 group w-fit">
-          <img src="/trainlivlogo.png" alt="TrainLiv" className="h-10 w-auto" />
+          <img src="/Logo_(2).png" alt="TrainLiv" className="h-10 w-auto" />
         </Link>
 
         <div className="flex-1 flex flex-col justify-center max-w-lg mt-16">
@@ -327,7 +327,7 @@ export default function SignUpPage() {
 
         <div className="lg:hidden flex items-center px-6 pt-6 pb-4">
           <Link to="/" className="flex items-center gap-2.5">
-            <img src="/trainlivlogo.png" alt="TrainLiv" className="h-8 w-auto" />
+            <img src="/Logo_(2).png" alt="TrainLiv" className="h-8 w-auto" />
           </Link>
         </div>
 

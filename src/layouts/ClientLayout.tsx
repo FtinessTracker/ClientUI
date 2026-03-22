@@ -76,7 +76,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             {/* Left: Logo + Nav */}
             <div className="flex items-center gap-10">
               <Link to="/calendar" className="flex items-center gap-2.5 shrink-0 group">
-                <img src="/trainlivlogo.png" alt="TrainLiv" className="h-8 w-auto transition-transform group-hover:scale-105 duration-200" />
+                <img src="/Logo_(2).png" alt="TrainLiv" className="h-8 w-auto transition-transform group-hover:scale-105 duration-200" />
               </Link>
 
               <nav className="hidden md:flex items-center h-[62px]">
