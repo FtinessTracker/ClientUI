@@ -25,6 +25,7 @@ import CalendarPage from './pages/client/CalendarPage';
 import WorkoutsPage from './pages/client/WorkoutsPage';
 import NutritionPage from './pages/client/NutritionPage';
 import PlansPage from './pages/client/PlansPage';
+import ProductsPage from './pages/client/ProductsPage';
 import SessionRoom from './pages/shared/SessionRoom';
 import { useAppUser } from './hooks/useAppUser';
 
@@ -128,6 +129,7 @@ function AppRoutes() {
       <Route path="/workouts" element={<ClientRoute><WorkoutsPage /></ClientRoute>} />
       <Route path="/nutrition" element={<ClientRoute><NutritionPage /></ClientRoute>} />
       <Route path="/plans" element={<ClientRoute><PlansPage /></ClientRoute>} />
+      <Route path="/products" element={<ClientRoute><ProductsPage /></ClientRoute>} />
       <Route path="/profile" element={<ClientRoute><ClientProfilePage /></ClientRoute>} />
       <Route path="/trainers" element={<ClientRoute><TrainerDiscovery /></ClientRoute>} />
       <Route path="/trainer/:id" element={<ClientRoute><TrainerProfile /></ClientRoute>} />
