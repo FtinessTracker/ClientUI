@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, Plus, Trash2, Video, MapPin, ChevronLeft, ChevronRight, User, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, MoveHorizontal as MoreHorizontal } from 'lucide-react';
@@ -37,6 +38,7 @@ function getAvatarForClient(clientId: string) {
 }
 
 export default function TrainerSchedule() {
+  const navigate = useNavigate();
   const { appUser } = useAppUser();
   const queryClient = useQueryClient();
   const [weekOffset, setWeekOffset] = useState(0);
@@ -300,6 +302,15 @@ export default function TrainerSchedule() {
                             {status.label}
                           </span>
                         </div>
+                        {booking.session_type === 'virtual' && (
+                          <button
+                            onClick={() => navigate(`/session/${booking.id}`)}
+                            className="mt-3 w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
+                          >
+                            <Video className="w-3.5 h-3.5" />
+                            Start Session
+                          </button>
+                        )}
                       </div>
                     );
                   })
@@ -419,6 +430,15 @@ export default function TrainerSchedule() {
                       {status.label}
                     </span>
                     <span className="font-black text-slate-900">${booking.price}</span>
+                    {booking.session_type === 'virtual' && (
+                      <button
+                        onClick={() => navigate(`/session/${booking.id}`)}
+                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors"
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        Start
+                      </button>
+                    )}
                   </div>
                 </div>
               );

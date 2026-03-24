@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Video, Clock, User, MapPin, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -44,6 +45,7 @@ function getFirstDayOfMonth(year: number, month: number) {
 }
 
 export default function CalendarPage() {
+  const navigate = useNavigate();
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -203,10 +205,17 @@ export default function CalendarPage() {
                           <p className="text-xs text-slate-500 font-medium">{s.trainer} · {s.time} · {s.duration}</p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {s.mode === 'virtual'
-                            ? <Video className="w-4 h-4 text-slate-400" />
-                            : <MapPin className="w-4 h-4 text-slate-400" />
-                          }
+                          {s.mode === 'virtual' ? (
+                            <button
+                              onClick={() => navigate(`/session/${s.id}`)}
+                              className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              Join
+                            </button>
+                          ) : (
+                            <MapPin className="w-4 h-4 text-slate-400" />
+                          )}
                           <button className="p-1.5 hover:bg-white/60 rounded-lg transition-colors">
                             <MoreHorizontal className="w-4 h-4 text-slate-400" />
                           </button>
@@ -266,6 +275,15 @@ export default function CalendarPage() {
                           <Clock className="w-3 h-3" /> {s.time}
                         </span>
                       </div>
+                      {s.mode === 'virtual' && (
+                        <button
+                          onClick={() => navigate(`/session/${s.id}`)}
+                          className="mt-3 w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 rounded-xl transition-colors"
+                        >
+                          <Video className="w-3.5 h-3.5" />
+                          Join Session
+                        </button>
+                      )}
                     </motion.div>
                   );
                 })}
