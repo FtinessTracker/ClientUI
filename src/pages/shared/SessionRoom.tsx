@@ -155,6 +155,7 @@ export default function SessionRoom() {
     initPreview();
 
     return () => {
+      if (roomRef.current) return;
       vTrack?.stop();
       aTrack?.stop();
     };
@@ -172,8 +173,6 @@ export default function SessionRoom() {
       const room = await connect(token, {
         name: roomName,
         tracks,
-        audio: true,
-        video: { width: 1280, height: 720 },
       });
 
       roomRef.current = room;
