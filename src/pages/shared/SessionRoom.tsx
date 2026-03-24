@@ -15,6 +15,7 @@ import {
 } from 'twilio-video';
 import { cn } from '../../lib/utils';
 import { getTwilioVideoToken } from '../../services/twilioService';
+import { useAppUser } from '../../hooks/useAppUser';
 
 function RemoteParticipantView({ participant }: { participant: RemoteParticipant }) {
   const videoRef = useRef<HTMLDivElement>(null);
@@ -118,6 +119,7 @@ interface ChatMessage {
 export default function SessionRoom() {
   const { id: roomParam } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { appUser } = useAppUser();
 
   const [phase, setPhase] = useState<'lobby' | 'connecting' | 'call' | 'error'>('lobby');
   const [error, setError] = useState('');
@@ -163,7 +165,7 @@ export default function SessionRoom() {
     setError('');
 
     try {
-      const { token } = await getTwilioVideoToken({ roomName });
+      const { token } = await getTwilioVideoToken({ roomName, userId: appUser?.id ?? 'anonymous' });
 
       const tracks = [localVideoTrack, localAudioTrack].filter(Boolean) as (LocalVideoTrack | LocalAudioTrack)[];
 

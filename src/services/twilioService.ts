@@ -1,11 +1,11 @@
-export async function getTwilioVideoToken({ roomName }: { roomName: string }): Promise<{ token: string }> {
+export async function getTwilioVideoToken({ roomName, userId }: { roomName: string; userId: string }): Promise<{ token: string }> {
   const response = await fetch('http://localhost:8080/api/video/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     credentials: 'include',
-    body: JSON.stringify({ roomName }),
+    body: JSON.stringify({ roomName, identity: userId }),
   });
 
   if (!response.ok) {
