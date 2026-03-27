@@ -14,7 +14,7 @@ import {
   createLocalAudioTrack,
 } from 'twilio-video';
 import { cn } from '../../lib/utils';
-import { getTwilioVideoToken } from '../../services/twilioService';
+import { getTwilioVideoToken, TwilioTokenResponse } from '../../services/twilioService';
 import { useAppUser } from '../../hooks/useAppUser';
 
 function RemoteParticipantView({ participant }: { participant: RemoteParticipant }) {
@@ -166,12 +166,14 @@ export default function SessionRoom() {
     setError('');
 
     try {
-      const { token } = await getTwilioVideoToken({ roomName, userId: appUser?.id ?? 'anonymous' });
+      const tokenResponse: TwilioTokenResponse = await getTwilioVideoToken({ roomName, userId: appUser?.id ?? 'anonymous' });
+      const { token } = tokenResponse;
+      const resolvedRoomName = tokenResponse.roomName ?? roomName;
 
       const tracks = [localVideoTrack, localAudioTrack].filter(Boolean) as (LocalVideoTrack | LocalAudioTrack)[];
 
       const room = await connect(token, {
-        name: roomName,
+        name: resolvedRoomName,
         tracks,
       });
 
