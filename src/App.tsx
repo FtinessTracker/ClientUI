@@ -111,6 +111,14 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
   return <ClientLayout>{children}</ClientLayout>;
 }
 
+function SessionRoute({ children }: { children: React.ReactNode }) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const location = useLocation();
+  if (!isLoaded) return <LoadingScreen />;
+  if (!isSignedIn) return <Navigate to="/sign-in" state={{ from: location }} replace />;
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   const { isSignedIn, isLoaded } = useAuth();
   const { appUser } = useAppUser();
@@ -134,7 +142,7 @@ function AppRoutes() {
       <Route path="/trainers" element={<ClientRoute><TrainerDiscovery /></ClientRoute>} />
       <Route path="/trainer/:id" element={<ClientRoute><TrainerProfile /></ClientRoute>} />
       <Route path="/book/:id" element={<ClientRoute><BookingFlow /></ClientRoute>} />
-      <Route path="/session/:id" element={<ClientRoute><SessionRoom /></ClientRoute>} />
+      <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
       <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
       <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />

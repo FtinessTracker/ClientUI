@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Users, Send, X, Loader as Loader2, CircleAlert as AlertCircle } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Users, Send, X, Loader as Loader2, CircleAlert as AlertCircle, Link, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   connect,
@@ -123,6 +123,7 @@ export default function SessionRoom() {
 
   const [phase, setPhase] = useState<'lobby' | 'connecting' | 'call' | 'error'>('lobby');
   const [error, setError] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -260,6 +261,17 @@ export default function SessionRoom() {
             </div>
             <h1 className="text-4xl font-black tracking-tighter text-slate-900">Ready to join?</h1>
             <p className="text-slate-400 mt-2 font-medium">Room: <span className="font-bold text-slate-700">{roomName}</span></p>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                setLinkCopied(true);
+                setTimeout(() => setLinkCopied(false), 2500);
+              }}
+              className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition-colors"
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Link className="w-3.5 h-3.5" />}
+              {linkCopied ? 'Link copied!' : 'Copy invite link'}
+            </button>
           </div>
 
           {phase === 'error' && (
