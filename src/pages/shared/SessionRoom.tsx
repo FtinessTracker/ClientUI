@@ -166,6 +166,7 @@ export default function SessionRoom() {
     setPhase('connecting');
     setError('');
 
+    
     try {
       const tokenResponse: TwilioTokenResponse = await getTwilioVideoToken({ roomName, userId: appUser?.id ?? 'anonymous' });
       const { token } = tokenResponse;
