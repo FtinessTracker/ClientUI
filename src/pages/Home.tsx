@@ -63,7 +63,7 @@ const TESTIMONIALS = [
   },
 ];
 
-function FadeIn({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
+const FadeIn: React.FC<{ children: React.ReactNode; delay?: number; className?: string }> = ({ children, delay = 0, className = '' }) => {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-80px' });
   return (
@@ -77,7 +77,7 @@ function FadeIn({ children, delay = 0, className = '' }: { children: React.React
       {children}
     </motion.div>
   );
-}
+};
 
 export default function Home({ user }: { user: User | null }) {
   return (

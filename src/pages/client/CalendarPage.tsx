@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, Video, Clock, User, MapPin, MoveHorizontal as MoreHorizontal } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Plus, Video, Clock, MapPin, ChevronDown, Calendar } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 
@@ -14,20 +14,182 @@ const MONTHS = [
 interface SessionEvent {
   id: string;
   day: number;
+  month: number;
+  year: number;
   time: string;
   duration: string;
   trainer: string;
+  trainerId: string;
+  trainerAvatar: string;
   type: string;
   mode: 'virtual' | 'in-person';
   color: string;
+  isBooked: boolean;
+  trainerBio: string;
+  trainerAvailability: string[];
 }
 
+const BIO_SARAH = 'Sarah is a certified yoga master with over 10 years of experience in Hatha and Yin Yoga. She focuses on breath-work and mindfulness to help clients achieve a balanced state of mind and body.';
+const BIO_MARCUS = 'Marcus is a high-performance strengthening coach who specializes in HIIT and athletic conditioning. His high-energy sessions are designed to push your limits and build functional strength.';
+const BIO_ELENA = 'Elena is a doctor of physical therapy and a mobility specialist. She helps clients recover from injuries and improve their range of motion through science-based rehabilitation techniques.';
+
+const AVAIL_DEFAULT = ['8:00 AM', '11:00 AM', '2:00 PM', '4:30 PM'];
+const AVAIL_MARCUS = ['10:00 AM', '12:30 PM', '3:00 PM', '7:30 PM'];
+
 const MOCK_SESSIONS: SessionEvent[] = [
-  { id: '1', day: 10, time: '7:00 AM', duration: '45 min', trainer: 'Sarah Jenkins', type: 'Yoga & Mindfulness', mode: 'virtual', color: 'emerald' },
-  { id: '2', day: 13, time: '6:30 PM', duration: '60 min', trainer: 'Marcus Chen', type: 'HIIT & Strength', mode: 'virtual', color: 'blue' },
-  { id: '3', day: 17, time: '9:00 AM', duration: '45 min', trainer: 'Elena Rodriguez', type: 'Mobility & Rehab', mode: 'in-person', color: 'amber' },
-  { id: '4', day: 19, time: '7:00 AM', duration: '60 min', trainer: 'Sarah Jenkins', type: 'Yoga & Mindfulness', mode: 'virtual', color: 'emerald' },
-  { id: '5', day: 24, time: '5:00 PM', duration: '45 min', trainer: 'Marcus Chen', type: 'HIIT & Strength', mode: 'virtual', color: 'blue' },
+  {
+    id: '1',
+    day: 10,
+    month: 3,
+    year: 2026,
+    time: '7:00 AM',
+    duration: '45 min',
+    trainer: 'Sarah Jenkins',
+    trainerId: 't1',
+    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Yoga & Mindfulness',
+    mode: 'virtual',
+    color: 'emerald',
+    isBooked: true,
+    trainerBio: BIO_SARAH,
+    trainerAvailability: AVAIL_DEFAULT
+  },
+  {
+    id: '101',
+    day: 10,
+    month: 3,
+    year: 2026,
+    time: '9:00 AM',
+    duration: '60 min',
+    trainer: 'Marcus Chen',
+    trainerId: 't2',
+    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'HIIT & Strength',
+    mode: 'virtual',
+    color: 'blue',
+    isBooked: false,
+    trainerBio: BIO_MARCUS,
+    trainerAvailability: AVAIL_MARCUS
+  },
+  {
+    id: '2',
+    day: 13,
+    month: 3,
+    year: 2026,
+    time: '6:30 PM',
+    duration: '60 min',
+    trainer: 'Marcus Chen',
+    trainerId: 't2',
+    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'HIIT & Strength',
+    mode: 'virtual',
+    color: 'blue',
+    isBooked: true,
+    trainerBio: BIO_MARCUS,
+    trainerAvailability: AVAIL_MARCUS
+  },
+  {
+    id: '3',
+    day: 17,
+    month: 3,
+    year: 2026,
+    time: '9:00 AM',
+    duration: '45 min',
+    trainer: 'Elena Rodriguez',
+    trainerId: 't3',
+    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Mobility & Rehab',
+    mode: 'in-person',
+    color: 'amber',
+    isBooked: true,
+    trainerBio: BIO_ELENA,
+    trainerAvailability: AVAIL_DEFAULT
+  },
+  {
+    id: '4',
+    day: 19,
+    month: 3,
+    year: 2026,
+    time: '7:00 AM',
+    duration: '60 min',
+    trainer: 'Sarah Jenkins',
+    trainerId: 't1',
+    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Yoga & Mindfulness',
+    mode: 'virtual',
+    color: 'emerald',
+    isBooked: true,
+    trainerBio: BIO_SARAH,
+    trainerAvailability: AVAIL_DEFAULT
+  },
+  {
+    id: '5',
+    day: 24,
+    month: 3,
+    year: 2026,
+    time: '5:00 PM',
+    duration: '45 min',
+    trainer: 'Marcus Chen',
+    trainerId: 't2',
+    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'HIIT & Strength',
+    mode: 'virtual',
+    color: 'blue',
+    isBooked: true,
+    trainerBio: BIO_MARCUS,
+    trainerAvailability: AVAIL_MARCUS
+  },
+  {
+    id: '501',
+    day: 24,
+    month: 3,
+    year: 2026,
+    time: '6:00 PM',
+    duration: '45 min',
+    trainer: 'Sarah Jenkins',
+    trainerId: 't1',
+    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Yoga',
+    mode: 'virtual',
+    color: 'emerald',
+    isBooked: true,
+    trainerBio: BIO_SARAH,
+    trainerAvailability: AVAIL_DEFAULT
+  },
+  {
+    id: '502',
+    day: 24,
+    month: 3,
+    year: 2026,
+    time: '7:00 PM',
+    duration: '45 min',
+    trainer: 'Elena Rodriguez',
+    trainerId: 't3',
+    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Rehab',
+    mode: 'in-person',
+    color: 'amber',
+    isBooked: true,
+    trainerBio: BIO_ELENA,
+    trainerAvailability: AVAIL_DEFAULT
+  },
+  {
+    id: '102',
+    day: 24,
+    month: 3,
+    year: 2026,
+    time: '8:30 PM',
+    duration: '45 min',
+    trainer: 'Elena Rodriguez',
+    trainerId: 't3',
+    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
+    type: 'Mobility & Rehab',
+    mode: 'virtual',
+    color: 'amber',
+    isBooked: false,
+    trainerBio: BIO_ELENA,
+    trainerAvailability: AVAIL_DEFAULT
+  },
 ];
 
 const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border: string }> = {
@@ -36,136 +198,196 @@ const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border:
   amber: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500', border: 'border-amber-200' },
 };
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-function getFirstDayOfMonth(year: number, month: number) {
-  return new Date(year, month, 1).getDay();
-}
-
 export default function CalendarPage() {
   const navigate = useNavigate();
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+
   const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDay, setSelectedDay] = useState<number | null>(today.getDate());
+  today.setHours(0, 0, 0, 0);
 
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
-  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+  const [viewStartDate, setViewStartDate] = useState(() => {
+    const d = new Date(today);
+    return d;
+  });
+  const [selectedDate, setSelectedDate] = useState<Date | null>(today);
 
-  function prevMonth() {
-    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
-    else setViewMonth(m => m - 1);
-    setSelectedDay(null);
+  function prevWeek() {
+    setViewStartDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      setSelectedDate(d);
+      return d;
+    });
   }
 
-  function nextMonth() {
-    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
-    else setViewMonth(m => m + 1);
-    setSelectedDay(null);
+  function nextWeek() {
+    setViewStartDate(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      setSelectedDate(d);
+      return d;
+    });
   }
 
-  const sessionsForDay = (day: number) => MOCK_SESSIONS.filter(s => s.day === day);
-  const selectedSessions = selectedDay ? sessionsForDay(selectedDay) : [];
+  const sessionsForDay = (date: Date) =>
+    MOCK_SESSIONS.filter(s =>
+      s.day === date.getDate() &&
+      s.month === date.getMonth() &&
+      s.year === date.getFullYear() &&
+      !s.isBooked
+    );
+
+  const selectedSessions = selectedDate ? sessionsForDay(selectedDate) : [];
 
   const upcomingSessions = MOCK_SESSIONS.filter(s => {
-    if (!isCurrentMonth) return false;
-    return s.day >= today.getDate();
+    const sDate = new Date(s.year, s.month, s.day);
+    return sDate >= today && s.isBooked;
+  }).sort((a, b) => {
+    const da = new Date(a.year, a.month, a.day);
+    const db = new Date(b.year, b.month, b.day);
+    return da.getTime() - db.getTime();
   }).slice(0, 3);
 
+  const getDateLabel = (sYear: number, sMonth: number, sDay: number) => {
+    const sDate = new Date(sYear, sMonth, sDay);
+    sDate.setHours(0, 0, 0, 0);
+    const diff = Math.floor((sDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diff === 0) return 'TODAY';
+    if (diff === 1) return 'TOMORROW';
+    return `${MONTHS[sMonth].slice(0, 3)} ${sDay}`;
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-[1440px] mx-auto space-y-10 py-4 px-4 sm:px-10">
+      {/* Background Decor */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
+      </div>
+
+      {/* Header Section */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="flex items-center justify-between"
+        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
       >
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900">Calendar</h1>
-          <p className="text-slate-400 font-medium mt-0.5">Manage and view your upcoming training sessions.</p>
+        <div className="relative group">
+          <div className="absolute -inset-x-8 -inset-y-4 bg-gradient-to-r from-accent/10 to-transparent blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          <h1 className="relative text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-none">
+            Calendar<span className="text-accent ml-1">.</span>
+          </h1>
+          <p className="relative text-slate-400 font-semibold mt-2 tracking-tight flex items-center gap-2">
+            <span className="w-8 h-px bg-slate-200" />
+            Empower your fitness narrative
+          </p>
         </div>
-        <Button className="rounded-xl font-bold shadow-lg shadow-slate-900/10 gap-2 h-11 px-5">
-          <Plus className="w-4 h-4" />
-          Book Session
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" className="rounded-2xl h-14 px-6 font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all">
+            History
+          </Button>
+          <Button className="rounded-2xl font-black bg-slate-900 hover:bg-slate-800 text-white shadow-[0_20px_40px_-12px_rgba(15,23,42,0.3)] hover:shadow-[0_20px_40px_-8px_rgba(15,23,42,0.4)] gap-3 h-14 px-8 transition-all hover:scale-[1.02] active:scale-95 group">
+            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
+            Book Session
+          </Button>
+        </div>
       </motion.div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-12 gap-8">
+        {/* Weekly Calendar Card */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="lg:col-span-7 bg-white/70 backdrop-blur-2xl rounded-[2.5rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-            <h2 className="text-lg font-black text-slate-900 tracking-tight">
-              {MONTHS[viewMonth]} {viewYear}
-            </h2>
-            <div className="flex items-center gap-1">
+          <div className="flex items-center justify-between px-6 sm:px-10 py-8 sm:py-10 border-b border-slate-100/50">
+            <div>
+              <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-2">Weekly Pipeline</p>
+              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-2">
+                {MONTHS[viewStartDate.getMonth()]}
+                <span className="text-slate-300 font-bold">{viewStartDate.getFullYear()}</span>
+              </h2>
+            </div>
+            <div className="flex items-center gap-2">
               <button
-                onClick={prevMonth}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors text-slate-500"
+                onClick={prevWeek}
+                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all text-slate-900 active:scale-90"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-5 h-5" />
               </button>
               <button
-                onClick={nextMonth}
-                className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 transition-colors text-slate-500"
+                onClick={nextWeek}
+                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all text-slate-900 active:scale-90"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          <div className="p-6">
-            <div className="grid grid-cols-7 mb-2">
-              {DAYS.map(d => (
-                <div key={d} className="text-center text-[11px] font-black text-slate-400 uppercase tracking-wider py-2">
-                  {d}
-                </div>
-              ))}
-            </div>
-
+          <div className="p-4 px-6">
             <div className="grid grid-cols-7 gap-px">
-              {Array.from({ length: firstDay }).map((_, i) => (
-                <div key={`empty-${i}`} />
-              ))}
-              {Array.from({ length: daysInMonth }).map((_, i) => {
-                const day = i + 1;
-                const isToday = isCurrentMonth && day === today.getDate();
-                const isSelected = day === selectedDay;
-                const daySessions = sessionsForDay(day);
+              {Array.from({ length: 7 }).map((_, i) => {
+                const date = new Date(viewStartDate);
+                date.setDate(viewStartDate.getDate() + i);
+
+                const isToday = date.toDateString() === today.toDateString();
+                const isSelected = selectedDate?.toDateString() === date.toDateString();
+                const daySessions = sessionsForDay(date);
 
                 return (
                   <button
-                    key={day}
-                    onClick={() => setSelectedDay(isSelected ? null : day)}
+                    key={date.toISOString()}
+                    onClick={() => setSelectedDate(isSelected ? null : date)}
                     className={cn(
-                      'relative flex flex-col items-center py-2 rounded-xl transition-all duration-150 hover:bg-slate-50 group',
-                      isSelected && 'bg-slate-900 hover:bg-slate-900',
-                      isToday && !isSelected && 'bg-accent/8'
+                      "relative h-24 py-4 flex flex-col items-center justify-between transition-all duration-500 group active:scale-95",
+                      isSelected ? "z-20" : "z-10 hover:bg-slate-50/50 rounded-3xl"
                     )}
                   >
-                    <span className={cn(
-                      'text-sm font-bold w-7 h-7 flex items-center justify-center rounded-lg',
-                      isSelected ? 'text-white' : isToday ? 'text-accent font-black' : 'text-slate-700'
-                    )}>
-                      {day}
-                    </span>
+                    {isSelected && (
+                      <motion.div
+                        layoutId="selectedDay"
+                        className="absolute inset-0 bg-slate-900 rounded-[2rem] shadow-[0_20px_40px_-12px_rgba(15,23,42,0.4)] z-0"
+                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                      />
+                    )}
+                    <div className="relative flex flex-col items-center z-10">
+                      <span className={cn(
+                        "text-[9px] font-black uppercase tracking-[0.2em] mb-1.5 transition-colors duration-300",
+                        isSelected ? "text-slate-400" : isToday ? "text-accent" : "text-slate-300"
+                      )}>
+                        <span className="sm:inline hidden">{DAYS[date.getDay()]}</span>
+                        <span className="inline sm:hidden">{DAYS[date.getDay()][0]}</span>
+                      </span>
+                      <span className={cn(
+                        'text-xl font-black transition-colors duration-300',
+                        isSelected ? 'text-white' : 'text-slate-700'
+                      )}>
+                        {date.getDate()}
+                      </span>
+                    </div>
+
                     {daySessions.length > 0 && (
-                      <div className="flex gap-0.5 mt-1">
-                        {daySessions.slice(0, 3).map(s => (
+                      <div className="relative flex -space-x-2.5 justify-center z-10">
+                        {daySessions.slice(0, 2).map((s, idx) => (
                           <div
                             key={s.id}
                             className={cn(
-                              'w-1.5 h-1.5 rounded-full',
-                              isSelected ? 'bg-white/60' : COLOR_MAP[s.color].dot
+                              "w-6 h-6 rounded-lg ring-2 overflow-hidden shadow-sm transition-all duration-500",
+                              isSelected ? "ring-slate-800" : "ring-white",
+                              idx === 0 ? "z-[1]" : "z-[2]"
                             )}
-                          />
+                          >
+                            <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" />
+                          </div>
                         ))}
+                        {daySessions.length > 2 && (
+                          <div className={cn(
+                            "w-6 h-6 rounded-lg ring-2 flex items-center justify-center text-[8px] font-black z-[3] shadow-sm transition-all duration-500",
+                            isSelected ? "ring-slate-800 bg-slate-800 text-slate-400" : "ring-white bg-slate-50 text-slate-600"
+                          )}>
+                            +{daySessions.length - 2}
+                          </div>
+                        )}
                       </div>
                     )}
                   </button>
@@ -174,116 +396,282 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          {selectedDay && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25 }}
-              className="border-t border-slate-100 px-6 py-5"
-            >
-              <p className="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">
-                {MONTHS[viewMonth]} {selectedDay}
-              </p>
-              {selectedSessions.length === 0 ? (
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-400">No sessions scheduled.</p>
-                  <Button variant="outline" className="rounded-xl h-9 px-4 font-bold text-sm border-slate-200 gap-1.5">
-                    <Plus className="w-3.5 h-3.5" />
-                    Add Session
-                  </Button>
+          <AnimatePresence mode="wait">
+            {selectedDate && (
+              <motion.div
+                key={selectedDate.toISOString()}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                className="border-t border-slate-100/50 px-10 py-12 bg-white/40"
+              >
+                <div className="flex items-end justify-between mb-10">
+                  <div>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Daily Ledger</p>
+                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">
+                      {MONTHS[selectedDate.getMonth()]} {selectedDate.getDate()}
+                      <span className="text-slate-300 ml-2 text-2xl">/ {selectedDate.getFullYear()}</span>
+                    </h3>
+                  </div>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedSessions.map(s => {
-                    const c = COLOR_MAP[s.color];
-                    return (
-                      <div key={s.id} className={cn('flex items-center gap-4 p-3 rounded-xl border', c.bg, c.border)}>
-                        <div className={cn('w-2 h-8 rounded-full shrink-0', c.dot)} />
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('font-bold text-sm', c.text)}>{s.type}</p>
-                          <p className="text-xs text-slate-500 font-medium">{s.trainer} · {s.time} · {s.duration}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {s.mode === 'virtual' ? (
-                            <button
-                              onClick={() => navigate(`/session/${s.id}`)}
-                              className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
-                            >
-                              <Video className="w-3.5 h-3.5" />
-                              Join
-                            </button>
-                          ) : (
-                            <MapPin className="w-4 h-4 text-slate-400" />
+
+                {selectedSessions.length === 0 ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between p-8 bg-white/50 border border-dashed border-slate-200 rounded-3xl">
+                    <p className="text-sm font-bold text-slate-400">No available sessions for this date.</p>
+                    <Button variant="outline" className="rounded-xl h-10 px-6 font-black text-xs border-slate-200 hover:bg-slate-900 hover:text-white transition-all gap-2">
+                      <Plus className="w-4 h-4" />
+                      Quick Add
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <div className="grid gap-3">
+                    {selectedSessions.map((s, i) => {
+                      const c = COLOR_MAP[s.color];
+                      const isExpanded = expandedSessionId === s.id;
+
+                      return (
+                        <motion.div
+                          key={s.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                          layout
+                          className={cn(
+                            "group relative bg-white rounded-[2.5rem] border border-slate-100/50 transition-shadow duration-500",
+                            isExpanded ? "shadow-[0_40px_80px_-24px_rgba(0,0,0,0.12)] ring-1 ring-slate-200" : "hover:shadow-2xl hover:shadow-slate-900/5"
                           )}
-                          <button className="p-1.5 hover:bg-white/60 rounded-lg transition-colors">
-                            <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </motion.div>
-          )}
+                        >
+                          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-t-[2.5rem]" />
+                          <div className="relative p-4 sm:p-6 sm:pl-8 sm:pr-10 flex flex-col sm:flex-row items-start sm:items-center justify-start gap-4 sm:gap-6 z-10">
+                            {/* 1. Profile Avatar */}
+                            <button
+                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                              className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[1.5rem] overflow-hidden shadow-inner shrink-0 ring-4 ring-slate-50 group-hover:ring-accent/10 transition-all duration-500 active:scale-95"
+                            >
+                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" />
+                            </button>
+
+                            {/* 2. Trainer Details */}
+                            <div className="min-w-0 pr-2 flex-1 sm:flex-none">
+                              <div className="space-y-1 mb-2">
+                                <span className={cn(
+                                  'text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] border backdrop-blur-sm shadow-sm transition-all duration-500 whitespace-nowrap',
+                                  c.bg, c.text, "border-white"
+                                )}>
+                                  {s.type}
+                                </span>
+                                <button
+                                  onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                                  className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate"
+                                >
+                                  {s.trainer}
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-3 sm:gap-4">
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <Clock className="w-3.5 h-3.5 text-slate-300" />
+                                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">{s.time}</span>
+                                </div>
+                                <div className="w-1 h-1 rounded-full bg-slate-200 flex-shrink-0" />
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em] whitespace-nowrap">{s.mode}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 3. Primary Action Buttons */}
+                            <div className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                              {s.isBooked ? (
+                                s.mode === 'virtual' ? (
+                                  <button
+                                    onClick={() => navigate(`/session/${s.id}`)}
+                                    className="relative w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                  >
+                                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
+                                    <Video className="w-4 h-4 relative z-10" />
+                                    <span className="relative z-10 whitespace-nowrap">Join Now</span>
+                                    <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4 blur-xl" />
+                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                  </button>
+                                ) : (
+                                  <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100 w-full sm:w-auto">
+                                    <MapPin className="w-4 h-4" />
+                                    On Site
+                                  </div>
+                                )
+                              ) : (
+                                <button
+                                  onClick={() => navigate(`/book/${s.id.startsWith('10') ? 't2' : 't1'}`)}
+                                  className="relative w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                >
+                                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
+                                  <Plus className="w-4 h-4 relative z-10" />
+                                  <span className="relative z-10 whitespace-nowrap">Book Now</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {/* 4. Secondary Actions / Expansion (Anchored Right) */}
+                            <div className="ml-auto flex items-center gap-4 sm:static absolute right-4 top-4 sm:right-auto sm:top-auto">
+                              <div className="h-10 w-px bg-slate-200/50 sm:block hidden" />
+                              <button
+                                onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
+                                className={cn(
+                                  "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300",
+                                  isExpanded ? "bg-slate-900 text-white shadow-xl" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shadow-sm"
+                                )}
+                              >
+                                <ChevronDown className={cn("w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-500", isExpanded && "rotate-180")} />
+                              </button>
+                            </div>
+                          </div>
+
+                          <AnimatePresence>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                              >
+                                <div className="px-6 pb-6 pt-2 border-t border-slate-50">
+                                  <div className="space-y-6">
+                                    <div className="space-y-4">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] inline-block pb-1 border-b-2 border-accent uppercase">Trainer Expertise</p>
+                                      <p className="text-base text-slate-600 leading-relaxed font-medium max-w-4xl">
+                                        {s.trainerBio}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center justify-start gap-3">
+                                      <Button
+                                        variant="default"
+                                        onClick={() => navigate(`/book/${s.trainerId}`)}
+                                        className="rounded-2xl text-xs font-black h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all active:scale-95 gap-2 cursor-pointer"
+                                      >
+                                        <Clock className="w-4 h-4" />
+                                        Check Availability
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                                        className="rounded-2xl text-xs font-black h-11 px-6 border-slate-200 hover:bg-slate-900 hover:text-white transition-all active:scale-95 cursor-pointer shadow-sm"
+                                      >
+                                        View Profile
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
-        <div className="space-y-5">
+        {/* Sidebar */}
+        <div className="lg:col-span-5 space-y-5">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5"
+            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white/40 shadow-xl p-6 sm:p-8"
           >
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-4">Upcoming Sessions</h3>
+            <div className="flex items-center justify-between mb-8">
+              <div className="space-y-1">
+                <h3 className="text-[10px] font-black text-accent uppercase tracking-[0.3em]">Your Journal</h3>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Upcoming Schedule</h2>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest">
+                {upcomingSessions.length} SESSIONS
+              </div>
+            </div>
             {upcomingSessions.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-slate-400 text-sm font-medium mb-4">No upcoming sessions this month.</p>
-                <Button className="rounded-xl h-9 px-5 font-bold text-sm gap-1.5">
-                  <Plus className="w-3.5 h-3.5" />
-                  Book Now
+              <div className="text-center py-10 px-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                  <Calendar className="w-8 h-8 text-slate-200" />
+                </div>
+                <p className="text-slate-400 text-sm font-medium mb-4">No current bookings this month.</p>
+                <Button className="rounded-xl h-10 px-6 font-bold text-sm gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10">
+                  <Plus className="w-4 h-4" />
+                  Explore Slots
                 </Button>
               </div>
             ) : (
               <div className="space-y-3">
                 {upcomingSessions.map((s, i) => {
                   const c = COLOR_MAP[s.color];
+                  const dateLabel = getDateLabel(s.year, s.month, s.day);
+                  const isToday = dateLabel === 'TODAY';
+
                   return (
                     <motion.div
                       key={s.id}
                       initial={{ opacity: 0, x: 12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.15 + i * 0.08 }}
-                      className={cn('p-4 rounded-xl border', c.bg, c.border)}
+                      className="group relative p-4 sm:p-5 rounded-[2rem] border border-slate-100 bg-white hover:bg-slate-50/50 transition-all duration-500 hover:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.06)] hover:scale-[1.01] active:scale-[0.99]"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <span className={cn('text-xs font-black uppercase tracking-wider', c.text)}>
-                          {MONTHS[viewMonth].slice(0, 3)} {s.day}
-                        </span>
-                        {s.mode === 'virtual'
-                          ? <Video className={cn('w-3.5 h-3.5', c.text)} />
-                          : <MapPin className={cn('w-3.5 h-3.5', c.text)} />
-                        }
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="relative shrink-0">
+                            <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-lg scale-75 group-hover:scale-110 transition-all" />
+                            <button
+                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                              className="w-12 h-12 rounded-[1.2rem] overflow-hidden border-2 border-white relative bg-white transition-all active:scale-95 shrink-0 shadow-sm"
+                            >
+                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" />
+                            </button>
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className={cn(
+                                'text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border',
+                                isToday ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
+                              )}>
+                                {dateLabel}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {s.mode === 'virtual' && isToday && (
+                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                )}
+                                <span className="text-[10px] font-bold text-slate-400">{s.time}</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                              className="font-black text-slate-900 text-[13px] tracking-tight hover:text-accent transition-colors text-left block truncate"
+                            >
+                              {s.trainer}
+                            </button>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-tight">{s.type}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex-shrink-0">
+                          {s.mode === 'virtual' ? (
+                            <button
+                              onClick={() => navigate(`/session/${s.id}`)}
+                              className="group/join relative flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-[11px] font-black h-9 px-5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap overflow-hidden"
+                            >
+                              <Video className="w-3.5 h-3.5 relative z-10" />
+                              <span className="relative z-10">Join Now</span>
+                              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/join:opacity-100 transition-opacity" />
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-slate-50 text-slate-400 text-[10px] font-black h-9 px-4 rounded-xl border border-slate-100 whitespace-nowrap">
+                              <MapPin className="w-3.5 h-3.5" />
+                              On Site
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <p className="font-bold text-slate-900 text-sm">{s.type}</p>
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                          <User className="w-3 h-3" /> {s.trainer.split(' ')[0]}
-                        </span>
-                        <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                          <Clock className="w-3 h-3" /> {s.time}
-                        </span>
-                      </div>
-                      {s.mode === 'virtual' && (
-                        <button
-                          onClick={() => navigate(`/session/${s.id}`)}
-                          className="mt-3 w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 rounded-xl transition-colors"
-                        >
-                          <Video className="w-3.5 h-3.5" />
-                          Join Session
-                        </button>
-                      )}
                     </motion.div>
                   );
                 })}
@@ -292,27 +680,26 @@ export default function CalendarPage() {
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-slate-900 rounded-2xl p-5 relative overflow-hidden"
+            transition={{ delay: 0.15, duration: 0.6 }}
+            className="bg-slate-900 rounded-[2rem] p-8 relative overflow-hidden shadow-2xl shadow-slate-900/30"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/15 rounded-full blur-2xl" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-[100px] -mr-32 -mt-32" />
             <div className="relative z-10">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-2">This Month</p>
-              <p className="text-white font-black text-2xl tracking-tight mb-1">
-                {MOCK_SESSIONS.length} Sessions
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Your Progress</p>
+              <p className="text-white font-black text-4xl tracking-tighter mb-1">
+                {MOCK_SESSIONS.length} <span className="text-xl text-slate-500 ml-1">Sessions</span>
               </p>
-              <p className="text-slate-500 text-xs font-medium mb-5">scheduled in {MONTHS[viewMonth]}</p>
-              <div className="grid grid-cols-3 gap-2">
+              <p className="text-slate-400 text-xs font-bold mb-8">scheduled in {MONTHS[viewStartDate.getMonth()]}</p>
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Yoga', count: 2, color: 'text-emerald-400' },
-                  { label: 'HIIT', count: 2, color: 'text-blue-400' },
-                  { label: 'Rehab', count: 1, color: 'text-amber-400' },
-                ].map(({ label, count, color }) => (
-                  <div key={label} className="bg-white/5 rounded-xl p-3 text-center">
-                    <p className={cn('text-lg font-black', color)}>{count}</p>
-                    <p className="text-[10px] text-slate-500 font-semibold">{label}</p>
+                  { label: 'Yoga', count: 2, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
+                  { label: 'HIIT', count: 2, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+                ].map(({ label, count, color, bg }) => (
+                  <div key={label} className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 transition-all hover:bg-white/10 group">
+                    <p className={cn('text-2xl font-black mb-1 transition-transform group-hover:scale-110', color)}>{count}</p>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{label}</p>
                   </div>
                 ))}
               </div>

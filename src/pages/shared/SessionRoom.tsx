@@ -34,7 +34,7 @@ function RemoteParticipantView({ participant }: { participant: RemoteParticipant
     }
 
     function detachTrack(track: RemoteVideoTrack | RemoteAudioTrack) {
-      track.detach().forEach(el => el.remove());
+      (track as any).detach().forEach((el: any) => el.remove());
     }
 
     participant.tracks.forEach(pub => {
@@ -47,7 +47,7 @@ function RemoteParticipantView({ participant }: { participant: RemoteParticipant
     return () => {
       participant.removeAllListeners();
       participant.tracks.forEach(pub => {
-        if (pub.track) pub.track.detach().forEach(el => el.remove());
+        if (pub.track) (pub.track as any).detach().forEach((el: any) => el.remove());
       });
     };
   }, [participant]);

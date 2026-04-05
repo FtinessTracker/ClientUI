@@ -173,15 +173,15 @@ function YesNoToggle({
   );
 }
 
-function Checkbox({
-  label,
-  checked,
-  onChange,
-}: {
+const Checkbox: React.FC<{
   label: string;
   checked: boolean;
   onChange: (v: boolean) => void;
-}) {
+}> = ({
+  label,
+  checked,
+  onChange,
+}) => {
   return (
     <label
       onClick={() => onChange(!checked)}
@@ -208,7 +208,7 @@ function Checkbox({
       <span className="text-sm font-semibold">{label}</span>
     </label>
   );
-}
+};
 
 export default function OnboardingQuestions() {
   const navigate = useNavigate();
@@ -217,9 +217,9 @@ export default function OnboardingQuestions() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const answeredCount = Object.values(answers).filter(a => a.value !== null && a.value !== undefined).length;
+  const answeredCount = (Object.values(answers) as QuestionAnswer[]).filter(a => a.value !== null && a.value !== undefined).length;
   const allAnswered = answeredCount === QUESTIONS.length;
-  const hasYes = Object.values(answers).some(a => a.value === true);
+  const hasYes = (Object.values(answers) as QuestionAnswer[]).some(a => a.value === true);
 
   function setYesNo(id: string, value: boolean) {
     setAnswers(prev => ({

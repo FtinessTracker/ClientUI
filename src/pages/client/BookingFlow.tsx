@@ -57,13 +57,13 @@ export default function BookingFlow() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Back link */}
-      <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+      <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="flex justify-between items-center">
         <Link
-          to={`/trainer/${trainer.id}`}
+          to="/calendar"
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-700 text-sm font-semibold transition-colors group"
         >
-          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          {trainer.name}
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+          Back to Calendar
         </Link>
       </motion.div>
 

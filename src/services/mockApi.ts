@@ -89,5 +89,21 @@ export const mockApi = {
         price: 75
       }
     ];
+  },
+
+  login: async (email: string, role: string) => {
+    await sleep(1000);
+    const mockUser = {
+      id: 'u1',
+      email,
+      name: email.split('@')[0],
+      role,
+      joinedAt: new Date().toISOString(),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
+    };
+    if (role === 'trainer') {
+      localStorage.setItem('mockTrainer', JSON.stringify(mockUser));
+    }
+    return mockUser;
   }
 };

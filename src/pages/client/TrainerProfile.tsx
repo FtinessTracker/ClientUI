@@ -45,9 +45,9 @@ export default function TrainerProfile() {
     <div className="space-y-8">
       {/* Back link */}
       <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
-        <Link to="/trainers" className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-700 text-sm font-semibold transition-colors group">
+        <Link to="/calendar" className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-700 text-sm font-semibold transition-colors group">
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Back to trainers
+          Back to Calendar
         </Link>
       </motion.div>
 

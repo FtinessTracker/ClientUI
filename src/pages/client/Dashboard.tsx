@@ -33,12 +33,12 @@ const TRAINER_RECS = [
   },
 ];
 
-function StatCard({
-  label, value, icon: Icon, color, bg, trend, delay,
-}: {
+const StatCard: React.FC<{
   label: string; value: string; icon: React.ElementType;
   color: string; bg: string; trend: string; delay: number;
-}) {
+}> = ({
+  label, value, icon: Icon, color, bg, trend, delay,
+}) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -61,7 +61,7 @@ function StatCard({
       </Card>
     </motion.div>
   );
-}
+};
 
 export default function ClientDashboard() {
   const { appUser: user } = useAppUser();
@@ -110,7 +110,16 @@ export default function ClientDashboard() {
           { label: 'Achievements', value: '12', icon: Award, color: 'text-amber-600', bg: 'bg-amber-50', trend: 'New!', delay: 0.15 },
           { label: 'Calories Burned', value: '8.4k', icon: Flame, color: 'text-rose-600', bg: 'bg-rose-50', trend: '+1.2k', delay: 0.2 },
         ].map((stat) => (
-          <StatCard key={stat.label} {...stat} />
+          <StatCard 
+            key={stat.label} 
+            label={stat.label}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            bg={stat.bg}
+            trend={stat.trend}
+            delay={stat.delay}
+          />
         ))}
       </div>
 

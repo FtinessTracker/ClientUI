@@ -16,6 +16,8 @@ import TrainerClients from './pages/trainer/Clients';
 import TrainerMessages from './pages/trainer/Messages';
 import TrainerPayments from './pages/trainer/Payments';
 import TrainerProfilePage from './pages/trainer/Profile';
+import TrainerSignIn from './pages/trainer/auth/TrainerSignIn';
+import TrainerSignUp from './pages/trainer/auth/TrainerSignUp';
 import TrainerDiscovery from './pages/client/TrainerDiscovery';
 import TrainerProfile from './pages/client/TrainerProfile';
 import BookingFlow from './pages/client/BookingFlow';
@@ -82,11 +84,14 @@ function TrainerRoute({
 
   if (!isLoaded || !userLoaded) return <LoadingScreen />;
 
-  if (!isSignedIn) {
-    return <Navigate to="/sign-up" state={{ from: location }} replace />;
+  // Support mock trainer login
+  const isMocked = localStorage.getItem('mockTrainer') !== null;
+
+  if (!isSignedIn && !isMocked) {
+    return <Navigate to="/trainer/sign-in" state={{ from: location }} replace />;
   }
 
-  if (allowedRoles && appUser && !allowedRoles.includes(appUser.role)) {
+  if (!isMocked && allowedRoles && appUser && !allowedRoles.includes(appUser.role)) {
     return <Navigate to="/calendar" replace />;
   }
 
@@ -145,6 +150,8 @@ function AppRoutes() {
       <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
       <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
+      <Route path="/trainer/sign-in" element={<TrainerSignIn />} />
+      <Route path="/trainer/sign-up" element={<TrainerSignUp />} />
       <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />
       <Route path="/trainer/schedule" element={<TrainerRoute allowedRoles={['trainer']}><TrainerSchedule /></TrainerRoute>} />
       <Route path="/trainer/clients" element={<TrainerRoute allowedRoles={['trainer']}><TrainerClients /></TrainerRoute>} />
