@@ -37,10 +37,12 @@ export default function TrainerSignUp() {
   ];
 
   const metCount  = passwordChecks.filter(c => c.met).length;
-  const strength  = metCount <= 1 ? 'Weak' : metCount === 2 ? 'Fair' : metCount === 3 ? 'Good' : metCount === 4 ? 'Strong' : 'Very Strong';
-  const strengthColor = metCount <= 1 ? '#ef4444' : metCount === 2 ? '#f97316' : metCount === 3 ? '#eab308' : metCount === 4 ? '#22c55e' : '#10b981';
+  const allMet    = metCount === 5;
+  const strength  = metCount <= 1 ? 'Weak' : metCount === 2 ? 'Fair' : metCount === 3 ? 'Good' : metCount === 4 ? 'Almost There' : 'Strong';
+  const strengthColor = metCount <= 1 ? '#ef4444' : metCount === 2 ? '#f97316' : metCount === 3 ? '#eab308' : metCount === 4 ? '#3b82f6' : '#22c55e';
   const strengthBar   = `${(metCount / 5) * 100}%`;
-  const nextTip = passwordChecks.find(c => !c.met)?.tip ?? null;
+  // Only show tip when there are still unmet requirements
+  const nextTip = allMet ? null : (passwordChecks.find(c => !c.met)?.tip ?? null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

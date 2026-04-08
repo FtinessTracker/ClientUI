@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock, CreditCard, CircleCheck as CheckCircle2, ArrowLeft, ShieldCheck, Zap, ChevronLeft, Loader as Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,6 +7,8 @@ import { mockApi } from '../../services/mockApi';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/utils';
+import { API_BASE_URL } from '../../config';
+import { useUser } from '@clerk/clerk-react';
 
 type Step = 'select-slot' | 'payment' | 'confirmation';
 
@@ -17,10 +19,9 @@ const TRAINER_IMAGES: Record<string, string> = {
 };
 
 const DAYS = [
-  { label: 'Mon', date: 15 }, { label: 'Tue', date: 16 }, { label: 'Wed', date: 17 },
-  { label: 'Thu', date: 18 }, { label: 'Fri', date: 19 }, { label: 'Sat', date: 20 }, { label: 'Sun', date: 21 },
+  { label: 'Mon', date: 6 }, { label: 'Tue', date: 7 }, { label: 'Wed', date: 8 },
+  { label: 'Thu', date: 9 }, { label: 'Fri', date: 10 }, { label: 'Sat', date: 11 }, { label: 'Sun', date: 12 },
 ];
-const TIMES = ['8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM'];
 
 const STEPS = [
   { id: 'select-slot', label: 'Schedule' },
@@ -31,24 +32,86 @@ const STEPS = [
 export default function BookingFlow() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as { trainerName?: string; trainerAvatar?: string; specialties?: string[] } | null;
+  const { user } = useUser();
   const [step, setStep] = useState<Step>('select-slot');
-  const [selectedDay, setSelectedDay] = useState<number>(15);
+  const [selectedDay, setSelectedDay] = useState<number>(7);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState<string>('60');
+  const [bookingResult, setBookingResult] = useState<any>(null);
 
   const { data: trainer, isLoading } = useQuery({
     queryKey: ['trainer', id],
-    queryFn: () => mockApi.getTrainerById(id!),
+    queryFn: async () => {
+      try {
+        return await mockApi.getTrainerById(id!);
+      } catch (err) {
+        if (id?.startsWith('user_')) {
+          return {
+            id,
+            name: state?.trainerName || 'Selected Trainer',
+            specialties: state?.specialties || ['Personal Training'],
+            pricePerHour: 80,
+            avatar: state?.trainerAvatar || 'https://placehold.net/avatar.png'
+          };
+        }
+        throw err;
+      }
+    },
   });
+
+  const dateStr = `2026-04-${String(selectedDay).padStart(2, '0')}`;
+
+  const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
+    queryKey: ['trainer-slots', id, dateStr],
+    queryFn: () => {
+      return fetch(`${API_BASE_URL}/api/booking/trainers/${id}/slots?date=${dateStr}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null);
+    },
+    enabled: !!id
+  });
+
+  const availableSlots = slotsData?.slotsByDuration?.[selectedDuration] || [];
 
   if (isLoading) return <BookingSkeleton />;
   if (!trainer) return <div className="text-center py-32 text-slate-400">Trainer not found</div>;
 
   const handleConfirm = async () => {
     setIsProcessing(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    setIsProcessing(false);
-    setStep('confirmation');
+    try {
+      const payload = {
+        trainerId: id,
+        trainerName: trainer?.name || 'Selected Trainer',
+        clientId: user?.id || 'unknown_client',
+        clientName: user?.fullName || user?.firstName || 'Current User',
+        durationInMinutes: parseInt(selectedDuration) || 60,
+        date: dateStr,
+        startTime: selectedTime,
+        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/booking/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setBookingResult(data);
+      } else {
+        console.error('Booking failed API call');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsProcessing(false);
+      setStep('confirmation');
+    }
   };
 
   const currentIdx = STEPS.findIndex((s) => s.id === step);
@@ -131,25 +194,58 @@ export default function BookingFlow() {
 
               {/* Time Picker */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                <h2 className="font-black text-slate-900 text-xl tracking-tight mb-5">
-                  Available Times <span className="text-slate-400 font-semibold text-base">— March {selectedDay}</span>
-                </h2>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {TIMES.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={cn(
-                        'p-3.5 rounded-xl border-2 font-bold text-sm transition-all duration-200',
-                        selectedTime === time
-                          ? 'border-accent bg-accent/8 text-accent shadow-sm'
-                          : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
-                      )}
-                    >
-                      {time}
-                    </button>
-                  ))}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                  <h2 className="font-black text-slate-900 text-xl tracking-tight">
+                    Available Times <span className="text-slate-400 font-semibold text-base">— April {selectedDay}</span>
+                  </h2>
+                  <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0">
+                    {['30', '45', '60'].map(dur => (
+                      <button
+                        key={dur}
+                        onClick={() => { setSelectedDuration(dur); setSelectedTime(null); }}
+                        className={cn(
+                          "px-4 py-1.5 text-xs font-black rounded-lg transition-all",
+                          selectedDuration === dur ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                        )}
+                      >
+                        {dur}m
+                      </button>
+                    ))}
+                  </div>
                 </div>
+                
+                {isLoadingSlots ? (
+                  <div className="py-10 text-center text-slate-400 font-bold flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Loading available slots...
+                  </div>
+                ) : availableSlots.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 font-bold">
+                    No slots available for this date and duration.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {availableSlots.map((slot: any, idx: number) => {
+                      const isSelected = selectedTime === slot.startTime;
+                      return (
+                        <button
+                          key={idx}
+                          disabled={!slot.available}
+                          onClick={() => setSelectedTime(slot.startTime)}
+                          className={cn(
+                            'p-3.5 rounded-xl border-2 font-bold text-sm transition-all duration-200',
+                            !slot.available ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-100' :
+                            isSelected
+                              ? 'border-accent bg-accent/8 text-accent shadow-sm'
+                              : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
+                          )}
+                        >
+                          {slot.startTime}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -171,7 +267,7 @@ export default function BookingFlow() {
                   {selectedDay && (
                     <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
                       <Calendar className="w-4 h-4 text-accent shrink-0" />
-                      <span className="text-white font-bold text-sm">March {selectedDay}, 2026</span>
+                      <span className="text-white font-bold text-sm">April {selectedDay}, 2026</span>
                     </div>
                   )}
                   {selectedTime && (
@@ -263,7 +359,7 @@ export default function BookingFlow() {
                 <div className="space-y-3 mb-5">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-slate-600">March {selectedDay}, 2026</span>
+                    <span className="font-semibold text-slate-600">April {selectedDay}, 2026</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4 text-slate-400" />
@@ -355,7 +451,11 @@ export default function BookingFlow() {
                 <div className="w-px h-8 bg-slate-200 hidden sm:block" />
                 <div className="text-center">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Date & Time</p>
-                  <p className="font-black text-slate-900">March {selectedDay} · {selectedTime}</p>
+                  <p className="font-black text-slate-900">
+                    {bookingResult
+                      ? `${bookingResult.clientLocalDate} · ${bookingResult.clientLocalStartTime} - ${bookingResult.clientLocalEndTime} (${bookingResult.clientTimezone || 'UTC'})`
+                      : `April ${selectedDay} · ${selectedTime}`}
+                  </p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 hidden sm:block" />
                 <div className="text-center">

@@ -5,6 +5,7 @@ import { Dumbbell, ChevronRight, Heart, Activity, TriangleAlert as AlertTriangle
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { useAppUser } from '../../hooks/useAppUser';
+import { API_BASE_URL } from '../../config';
 
 interface QuestionAnswer {
   value: boolean | null;
@@ -256,7 +257,7 @@ export default function OnboardingQuestions() {
     const payload = buildPayload(userId, answers);
 
     try {
-      const res = await fetch('http://localhost:8080/api/client/update-questionnaire', {
+      const res = await fetch(`${API_BASE_URL}/api/client/update-questionnaire`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

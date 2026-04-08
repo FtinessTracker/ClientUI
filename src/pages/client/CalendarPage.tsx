@@ -1,9 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, Video, Clock, MapPin, ChevronDown, Calendar } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
+import { API_BASE_URL } from '../../config';
+import { useUser } from '@clerk/clerk-react';
+import { useQuery } from '@tanstack/react-query';
+
+interface ApiTrainerWindow {
+  startTime: string;
+  endTime: string;
+}
+
+interface ApiTrainer {
+  trainerId: string;
+  trainerName: string;
+  profileImageUrl: string;
+  timezone: string;
+  windows: ApiTrainerWindow[];
+}
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = [
@@ -200,6 +216,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border:
 
 export default function CalendarPage() {
   const navigate = useNavigate();
+  const { user } = useUser();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
 
   const today = new Date();
@@ -210,6 +227,40 @@ export default function CalendarPage() {
     return d;
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
+  const [apiTrainers, setApiTrainers] = useState<ApiTrainer[]>([]);
+  const [isLoadingTrainers, setIsLoadingTrainers] = useState(false);
+
+  useEffect(() => {
+    const fetchTrainers = async () => {
+      if (!selectedDate) {
+        setApiTrainers([]);
+        return;
+      }
+      try {
+        setIsLoadingTrainers(true);
+        const year = selectedDate.getFullYear();
+        const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        const day = String(selectedDate.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        const response = await fetch(`${API_BASE_URL}/api/booking/trainers/available?date=${dateStr}`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setApiTrainers(data.trainers || []);
+        } else {
+          setApiTrainers([]);
+        }
+      } catch (error) {
+        console.error('Error fetching trainers:', error);
+        setApiTrainers([]);
+      } finally {
+        setIsLoadingTrainers(false);
+      }
+    };
+    fetchTrainers();
+  }, [selectedDate]);
 
   function prevWeek() {
     setViewStartDate(prev => {
@@ -239,12 +290,68 @@ export default function CalendarPage() {
 
   const selectedSessions = selectedDate ? sessionsForDay(selectedDate) : [];
 
-  const upcomingSessions = MOCK_SESSIONS.filter(s => {
-    const sDate = new Date(s.year, s.month, s.day);
-    return sDate >= today && s.isBooked;
-  }).sort((a, b) => {
-    const da = new Date(a.year, a.month, a.day);
-    const db = new Date(b.year, b.month, b.day);
+  const apiSessions: SessionEvent[] = apiTrainers.map((t, idx) => {
+    const startTimeStr = t.windows && t.windows.length > 0 ? t.windows[0].startTime : '08:00';
+    const [h, m] = startTimeStr.split(':');
+    const hour = parseInt(h, 10) || 8;
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const formattedHour = hour % 12 || 12;
+    const timeFormatted = `${formattedHour}:${m || '00'} ${ampm}`;
+
+    return {
+      id: `api_${t.trainerId}_${idx}`,
+      day: selectedDate?.getDate() || 1,
+      month: selectedDate?.getMonth() || 0,
+      year: selectedDate?.getFullYear() || 2026,
+      time: timeFormatted,
+      duration: 'Flexible',
+      trainer: t.trainerName,
+      trainerId: t.trainerId,
+      trainerAvatar: t.profileImageUrl || 'https://placehold.net/avatar.png',
+      type: 'Personal Training',
+      mode: 'virtual',
+      color: 'emerald',
+      isBooked: false,
+      trainerBio: `Available for booking in ${t.timezone || 'your timezone'}.`,
+      trainerAvailability: t.windows.map(w => `${w.startTime} - ${w.endTime}`)
+    };
+  });
+
+  const combinedSessions = [...apiSessions, ...selectedSessions];
+
+  const clientId = user?.id || 'client_001';
+
+  const { data: upcomingData, isLoading: isLoadingUpcoming } = useQuery({
+    queryKey: ['upcoming-bookings', clientId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/booking/clients/${clientId}/bookings/upcoming`, {
+        credentials: 'include'
+      });
+      if (!res.ok) throw new Error('Failed to fetch upcoming bookings');
+      return res.json();
+    },
+    enabled: !!clientId
+  });
+
+  const apiUpcomingBookings = upcomingData?.bookings || [];
+
+  const upcomingSessions = apiUpcomingBookings.map((b: any) => {
+    const [yyyy, mm, dd] = b.date.split('-');
+    return {
+      id: b.bookingId,
+      year: parseInt(yyyy),
+      month: parseInt(mm) - 1,
+      day: parseInt(dd),
+      time: b.startTime,
+      trainer: b.trainerName,
+      trainerId: b.trainerId,
+      trainerAvatar: 'https://placehold.net/avatar.png',
+      mode: 'virtual',
+      color: 'emerald' as any
+    };
+  }).sort((a: any, b: any) => {
+    const da = new Date(a.year, a.month, a.day, parseInt(a.time.substring(0, 2)));
+    const db = new Date(b.year, b.month, b.day, parseInt(b.time.substring(0, 2)));
     return da.getTime() - db.getTime();
   }).slice(0, 3);
 
@@ -416,7 +523,11 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                {selectedSessions.length === 0 ? (
+                {isLoadingTrainers ? (
+                  <div className="flex items-center justify-center p-8 bg-white/50 border border-dashed border-slate-200 rounded-3xl">
+                    <p className="text-sm font-bold text-slate-400">Loading available trainers...</p>
+                  </div>
+                ) : combinedSessions.length === 0 ? (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between p-8 bg-white/50 border border-dashed border-slate-200 rounded-3xl">
                     <p className="text-sm font-bold text-slate-400">No available sessions for this date.</p>
                     <Button variant="outline" className="rounded-xl h-10 px-6 font-black text-xs border-slate-200 hover:bg-slate-900 hover:text-white transition-all gap-2">
@@ -426,7 +537,7 @@ export default function CalendarPage() {
                   </motion.div>
                 ) : (
                   <div className="grid gap-3">
-                    {selectedSessions.map((s, i) => {
+                    {combinedSessions.map((s, i) => {
                       const c = COLOR_MAP[s.color];
                       const isExpanded = expandedSessionId === s.id;
 
@@ -453,8 +564,8 @@ export default function CalendarPage() {
                             </button>
 
                             {/* 2. Trainer Details */}
-                            <div className="min-w-0 pr-2 flex-1 sm:flex-none">
-                              <div className="space-y-1 mb-2">
+                            <div className="min-w-0 flex-1">
+                              <div className="space-y-1 mb-2 font-medium">
                                 <span className={cn(
                                   'text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] border backdrop-blur-sm shadow-sm transition-all duration-500 whitespace-nowrap',
                                   c.bg, c.text, "border-white"
@@ -463,7 +574,7 @@ export default function CalendarPage() {
                                 </span>
                                 <button
                                   onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                                  className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate"
+                                  className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate max-w-full"
                                 >
                                   {s.trainer}
                                 </button>
@@ -502,7 +613,7 @@ export default function CalendarPage() {
                                 )
                               ) : (
                                 <button
-                                  onClick={() => navigate(`/book/${s.id.startsWith('10') ? 't2' : 't1'}`)}
+                                  onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
                                   className="relative w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
                                 >
                                   <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
@@ -546,7 +657,7 @@ export default function CalendarPage() {
                                     <div className="flex flex-wrap items-center justify-start gap-3">
                                       <Button
                                         variant="default"
-                                        onClick={() => navigate(`/book/${s.trainerId}`)}
+                                        onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
                                         className="rounded-2xl text-xs font-black h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all active:scale-95 gap-2 cursor-pointer"
                                       >
                                         <Clock className="w-4 h-4" />

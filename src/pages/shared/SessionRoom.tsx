@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare, Users, Send, X, Loader as Loader2, CircleAlert as AlertCircle, Link, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -16,6 +16,7 @@ import {
 import { cn } from '../../lib/utils';
 import { getTwilioVideoToken, TwilioTokenResponse } from '../../services/twilioService';
 import { useAppUser } from '../../hooks/useAppUser';
+import { API_BASE_URL } from '../../config';
 
 function RemoteParticipantView({ participant }: { participant: RemoteParticipant }) {
   const videoRef = useRef<HTMLDivElement>(null);
@@ -119,6 +120,7 @@ interface ChatMessage {
 export default function SessionRoom() {
   const { id: roomParam } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { appUser } = useAppUser();
 
   const [phase, setPhase] = useState<'lobby' | 'connecting' | 'call' | 'error'>('lobby');
@@ -168,9 +170,26 @@ export default function SessionRoom() {
 
     
     try {
-      const tokenResponse: TwilioTokenResponse = await getTwilioVideoToken({ roomName, userId: appUser?.id ?? 'anonymous' });
-      const { token } = tokenResponse;
-      const resolvedRoomName = tokenResponse.roomName ?? roomName;
+      const payload = {
+        meetingId: roomParam,
+        bookingId: location.state?.bookingId || roomParam, // Fallback if meeting mapping is unified
+        userId: appUser?.id || 'client_001',
+        initiatedBy: appUser?.name || 'Client',
+        initiatorRole: appUser?.role?.toUpperCase() || 'CLIENT'
+      };
+
+      const joinRes = await fetch(`${API_BASE_URL}/api/video/${roomParam}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      
+      if (!joinRes.ok) throw new Error('Failed to join video meeting session');
+      const sessionData = await joinRes.json();
+
+      const token = sessionData.token;
+      const resolvedRoomName = sessionData.roomName;
 
       const tracks = [localVideoTrack, localAudioTrack].filter(Boolean) as (LocalVideoTrack | LocalAudioTrack)[];
 

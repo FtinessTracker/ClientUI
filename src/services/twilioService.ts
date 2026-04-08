@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config';
+
 export interface TwilioTokenResponse {
   token: string;
   identity?: string;
@@ -5,7 +7,7 @@ export interface TwilioTokenResponse {
 }
 
 export async function getTwilioVideoToken({ roomName, userId }: { roomName: string; userId: string }): Promise<TwilioTokenResponse> {
-  const response = await fetch('http://localhost:8080/api/video/token', {
+  const response = await fetch(`${API_BASE_URL}/api/video/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
