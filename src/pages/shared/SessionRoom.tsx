@@ -170,15 +170,17 @@ export default function SessionRoom() {
 
     
     try {
+      const officialMeetingId = location.state?.meetingId || roomParam;
+
       const joinPayload = {
-        meetingId: roomParam,
-        bookingId: location.state?.bookingId || roomParam, 
+        meetingId: officialMeetingId,
+        bookingId: location.state?.bookingId || officialMeetingId, 
         userId: appUser?.id || 'unknown_user',
         initiatedBy: appUser?.name || 'User',
         initiatorRole: appUser?.role?.toUpperCase() || 'CLIENT'
       };
 
-      const joinRes = await fetch(`${API_BASE_URL}/api/video/${roomParam}/join`, {
+      const joinRes = await fetch(`${API_BASE_URL}/api/video/${officialMeetingId}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

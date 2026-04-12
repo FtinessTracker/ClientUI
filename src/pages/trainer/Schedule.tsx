@@ -564,8 +564,8 @@ export default function TrainerSchedule() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {todayBookingsData.bookings.map(booking => (
-                    <div key={booking.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group">
+                  {todayBookingsData.bookings.map((booking, idx) => (
+                    <div key={booking.bookingId || booking.id || idx} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
                           {booking.clientAvatar ? (
@@ -652,8 +652,8 @@ export default function TrainerSchedule() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {upcomingBookingsData.bookings.map(booking => (
-                    <div key={booking.id || booking.bookingId} className="flex items-center justify-between p-4 bg-slate-50/30 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                  {upcomingBookingsData.bookings.map((booking, idx) => (
+                    <div key={booking.bookingId || booking.id || `upcoming-${idx}`} className="flex items-center justify-between p-4 bg-slate-50/30 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 shadow-sm">
                           {booking.clientAvatar ? (

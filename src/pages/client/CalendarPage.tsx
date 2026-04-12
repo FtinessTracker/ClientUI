@@ -343,6 +343,7 @@ export default function CalendarPage() {
     const [yyyy, mm, dd] = b.date.split('-');
     return {
       id: b.bookingId,
+      meetingId: b.meetingId,
       year: parseInt(yyyy),
       month: parseInt(mm) - 1,
       day: parseInt(dd),
@@ -350,7 +351,8 @@ export default function CalendarPage() {
       trainer: b.trainerName,
       trainerId: b.trainerId,
       trainerAvatar: b.trainerProfileImageUrl || DEFAULT_AVATAR,
-      mode: 'virtual',
+      type: b.type || 'Personal Training', // Fallback type
+      mode: 'virtual' as const,
       color: 'emerald' as any
     };
   }).sort((a: any, b: any) => {
@@ -803,7 +805,17 @@ export default function CalendarPage() {
                         <div className="flex-shrink-0">
                           {s.mode === 'virtual' ? (
                             <button
-                              onClick={() => navigate(`/session/${s.id}`)}
+                              onClick={() => {
+                                const roomId = s.meetingId || s.id;
+                                navigate(`/session/${roomId}`, { 
+                                  state: { 
+                                    bookingId: s.id,
+                                    meetingId: s.meetingId,
+                                    trainerId: s.trainerId,
+                                    clientId: clientId
+                                  } 
+                                });
+                              }}
                               className="group/join relative flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-[11px] font-black h-9 px-5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap overflow-hidden"
                             >
                               <Video className="w-3.5 h-3.5 relative z-10" />

@@ -119,8 +119,16 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 function SessionRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const location = useLocation();
+  
   if (!isLoaded) return <LoadingScreen />;
-  if (!isSignedIn) return <Navigate to="/sign-in" state={{ from: location }} replace />;
+
+  // Support mock trainer login for session entry
+  const isMocked = localStorage.getItem('mockTrainer') !== null;
+
+  if (!isSignedIn && !isMocked) {
+    return <Navigate to="/sign-in" state={{ from: location }} replace />;
+  }
+  
   return <>{children}</>;
 }
 
