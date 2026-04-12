@@ -39,6 +39,7 @@ export interface Booking {
   duration: number; // minutes
   price: number;
   notes?: string;
+  meetingId?: string;
 }
 
 export interface Session {

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { format } from 'date-fns';
 import { mockApi } from '../../services/mockApi';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -144,8 +145,12 @@ export default function ClientDashboard() {
                 <div className="bg-white rounded-2xl border border-slate-100 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 overflow-hidden group">
                   <div className="flex">
                     <div className="w-20 shrink-0 bg-slate-50 border-r border-slate-100 flex flex-col items-center justify-center py-5 group-hover:bg-accent/5 transition-colors">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Mar</span>
-                      <span className="text-2xl font-black text-slate-900">15</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                        {format(new Date(booking.date), 'MMM')}
+                      </span>
+                      <span className="text-2xl font-black text-slate-900">
+                        {format(new Date(booking.date), 'd')}
+                      </span>
                     </div>
                     <div className="flex-1 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex items-center gap-4">
@@ -171,7 +176,15 @@ export default function ClientDashboard() {
                           Reschedule
                         </button>
                         <Button className="h-9 rounded-xl font-bold text-xs px-5 shadow-md shadow-slate-900/10" asChild>
-                          <Link to={`/session/${booking.id}`}>
+                          <Link 
+                            to={`/session/${booking.meetingId || booking.id}`} 
+                            state={{ 
+                              bookingId: booking.id,
+                              meetingId: booking.meetingId,
+                              trainerId: booking.trainerId,
+                              clientId: user?.id || booking.clientId
+                            }}
+                          >
                             <Play className="w-3 h-3 mr-1.5 fill-current" />
                             Join
                           </Link>

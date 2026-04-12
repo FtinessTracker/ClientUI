@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Calendar, Clock, CreditCard, CircleCheck as CheckCircle2, ArrowLeft, ShieldCheck, Zap, ChevronLeft, Loader as Loader2 } from 'lucide-react';
+import { Calendar, Clock, CreditCard, CircleCheck as CheckCircle2, ArrowLeft, ShieldCheck, Zap, ChevronLeft, ChevronRight, Sunrise, Sun, Moon, Play, Loader as Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { mockApi } from '../../services/mockApi';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '../../config';
 import { useUser } from '@clerk/clerk-react';
+import { getSystemTimezone } from '../../lib/timezone';
 
 type Step = 'select-slot' | 'payment' | 'confirmation';
 
@@ -18,25 +20,43 @@ const TRAINER_IMAGES: Record<string, string> = {
   t3: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=200',
 };
 
-const DAYS = [
-  { label: 'Mon', date: 6 }, { label: 'Tue', date: 7 }, { label: 'Wed', date: 8 },
-  { label: 'Thu', date: 9 }, { label: 'Fri', date: 10 }, { label: 'Sat', date: 11 }, { label: 'Sun', date: 12 },
-];
-
 const STEPS = [
   { id: 'select-slot', label: 'Schedule' },
   { id: 'payment', label: 'Payment' },
   { id: 'confirmation', label: 'Confirmed' },
 ];
 
+const formatTime = (time: string) => {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours, 10);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayHours = h % 12 || 12;
+  return `${displayHours}:${minutes} ${ampm}`;
+};
+
 export default function BookingFlow() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const state = location.state as { trainerName?: string; trainerAvatar?: string; specialties?: string[] } | null;
+  const state = location.state as { 
+    trainerName?: string; 
+    trainerAvatar?: string; 
+    specialties?: string[];
+    selectedDate?: string;
+  } | null;
   const { user } = useUser();
   const [step, setStep] = useState<Step>('select-slot');
-  const [selectedDay, setSelectedDay] = useState<number>(7);
+
+  // Initialize selectedDate from state if available, otherwise default to today
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (state?.selectedDate) return new Date(state.selectedDate);
+    return new Date();
+  });
+
+  // Start of the week for the day picker
+  const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(selectedDate, { weekStartsOn: 1 }));
+
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<string>('60');
@@ -62,17 +82,40 @@ export default function BookingFlow() {
     },
   });
 
-  const dateStr = `2026-04-${String(selectedDay).padStart(2, '0')}`;
+  const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+  const prevWeek = () => setWeekStartDate(prev => addDays(prev, -7));
+  const nextWeek = () => setWeekStartDate(prev => addDays(prev, 7));
+
+  // Generate 7 days for the current week view
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStartDate, i));
 
   const { data: slotsData, isLoading: isLoadingSlots } = useQuery({
     queryKey: ['trainer-slots', id, dateStr],
     queryFn: () => {
-      return fetch(`${API_BASE_URL}/api/booking/trainers/${id}/slots?date=${dateStr}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null);
+      return fetch(`${API_BASE_URL}/api/booking/trainers/${id}/slots?date=${dateStr}&trainerId=${id}&clientTimezone=${getSystemTimezone()}`, { credentials: 'include' }).then(r => r.ok ? r.json() : null);
     },
     enabled: !!id
   });
 
   const availableSlots = slotsData?.slotsByDuration?.[selectedDuration] || [];
+
+  const groupedSlots = React.useMemo(() => {
+    const morning: any[] = [];
+    const afternoon: any[] = [];
+    const evening: any[] = [];
+
+    availableSlots.forEach((slot: any) => {
+      const hour = parseInt(slot.startTime.split(':')[0], 10);
+      if (hour < 12) morning.push(slot);
+      else if (hour < 17) afternoon.push(slot);
+      else evening.push(slot);
+    });
+
+    return { morning, afternoon, evening };
+  }, [availableSlots]);
+
+  const selectedSlot = availableSlots.find((s: any) => s.startTime === selectedTime);
 
   if (isLoading) return <BookingSkeleton />;
   if (!trainer) return <div className="text-center py-32 text-slate-400">Trainer not found</div>;
@@ -88,7 +131,7 @@ export default function BookingFlow() {
         durationInMinutes: parseInt(selectedDuration) || 60,
         date: dateStr,
         startTime: selectedTime,
-        clientTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        clientTimezone: getSystemTimezone()
       };
 
       const res = await fetch(`${API_BASE_URL}/api/booking/bookings`, {
@@ -172,23 +215,44 @@ export default function BookingFlow() {
             <div className="lg:col-span-8 space-y-6">
               {/* Day Picker */}
               <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
-                <h2 className="font-black text-slate-900 text-xl tracking-tight mb-5">Pick Your Day</h2>
-                <div className="grid grid-cols-7 gap-2">
-                  {DAYS.map(({ label, date }) => (
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-black text-slate-900 text-xl tracking-tight">Pick Your Day</h2>
+                  <div className="flex items-center gap-2">
                     <button
-                      key={date}
-                      onClick={() => setSelectedDay(date)}
-                      className={cn(
-                        'flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 font-bold',
-                        selectedDay === date
-                          ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/15'
-                          : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200 hover:bg-white'
-                      )}
+                      onClick={prevWeek}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-900 transition-all active:scale-90"
                     >
-                      <span className="text-[9px] font-black uppercase tracking-widest opacity-70">{label}</span>
-                      <span className="text-xl font-black">{date}</span>
+                      <ChevronLeft className="w-5 h-5" />
                     </button>
-                  ))}
+                    <button
+                      onClick={nextWeek}
+                      className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-900 transition-all active:scale-90"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                  {weekDays.map((date) => {
+                    const isSelected = isSameDay(date, selectedDate);
+                    return (
+                      <button
+                        key={date.toISOString()}
+                        onClick={() => setSelectedDate(date)}
+                        className={cn(
+                          'flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all duration-200 font-bold',
+                          isSelected
+                            ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/15'
+                            : 'border-slate-100 bg-slate-50 text-slate-500 hover:border-slate-200 hover:bg-white'
+                        )}
+                      >
+                        <span className="text-[9px] font-black uppercase tracking-widest opacity-70">
+                          {format(date, 'EEE')}
+                        </span>
+                        <span className="text-xl font-black">{format(date, 'd')}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -196,7 +260,7 @@ export default function BookingFlow() {
               <div className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
                   <h2 className="font-black text-slate-900 text-xl tracking-tight">
-                    Available Times <span className="text-slate-400 font-semibold text-base">— April {selectedDay}</span>
+                    Available Times <span className="text-slate-400 font-semibold text-base">— {format(selectedDate, 'MMMM d')}</span>
                   </h2>
                   <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0">
                     {['30', '45', '60'].map(dur => (
@@ -224,26 +288,51 @@ export default function BookingFlow() {
                     No slots available for this date and duration.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {availableSlots.map((slot: any, idx: number) => {
-                      const isSelected = selectedTime === slot.startTime;
-                      return (
-                        <button
-                          key={idx}
-                          disabled={!slot.available}
-                          onClick={() => setSelectedTime(slot.startTime)}
-                          className={cn(
-                            'p-3.5 rounded-xl border-2 font-bold text-sm transition-all duration-200',
-                            !slot.available ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-100' :
-                            isSelected
-                              ? 'border-accent bg-accent/8 text-accent shadow-sm'
-                              : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200 hover:bg-white'
-                          )}
-                        >
-                          {slot.startTime}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-8">
+                    {[
+                      { title: 'Morning', icon: Sunrise, color: 'text-amber-500', slots: groupedSlots.morning },
+                      { title: 'Afternoon', icon: Sun, color: 'text-orange-500', slots: groupedSlots.afternoon },
+                      { title: 'Evening', icon: Moon, color: 'text-blue-500', slots: groupedSlots.evening },
+                    ].map((section) => section.slots.length > 0 && (
+                      <div key={section.title} className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <section.icon className={cn("w-4 h-4", section.color)} />
+                          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{section.title} Slots</h3>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {section.slots.map((slot: any, idx: number) => {
+                            const isSelected = selectedTime === slot.startTime;
+                            return (
+                              <button
+                                key={idx}
+                                disabled={!slot.available}
+                                onClick={() => setSelectedTime(slot.startTime)}
+                                className={cn(
+                                  'group p-3.5 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden',
+                                  !slot.available ? 'opacity-40 cursor-not-allowed bg-slate-50 border-slate-100' :
+                                  isSelected
+                                    ? 'border-accent bg-accent/5 shadow-sm'
+                                    : 'border-slate-100 bg-slate-50 hover:border-slate-200 hover:bg-white'
+                                )}
+                              >
+                                {isSelected && <motion.div layoutId="activeSlot" className="absolute inset-0 bg-accent/5 z-0" />}
+                                <div className="relative z-10">
+                                  <div className={cn(
+                                    "text-sm font-black mb-0.5 transition-colors",
+                                    isSelected ? "text-accent" : "text-slate-900"
+                                  )}>
+                                    {formatTime(slot.startTime)}
+                                  </div>
+                                  <div className="text-[10px] font-bold text-slate-400">
+                                    {formatTime(slot.endTime)}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -264,16 +353,18 @@ export default function BookingFlow() {
                   </div>
                 </div>
                 <div className="p-5 space-y-4">
-                  {selectedDay && (
+                  {selectedDate && (
                     <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
                       <Calendar className="w-4 h-4 text-accent shrink-0" />
-                      <span className="text-white font-bold text-sm">April {selectedDay}, 2026</span>
+                      <span className="text-white font-bold text-sm">{format(selectedDate, 'MMMM d, yyyy')}</span>
                     </div>
                   )}
-                  {selectedTime && (
+                  {selectedTime && selectedSlot && (
                     <div className="flex items-center gap-3 bg-white/5 rounded-xl px-4 py-3">
                       <Clock className="w-4 h-4 text-accent shrink-0" />
-                      <span className="text-white font-bold text-sm">{selectedTime}</span>
+                      <span className="text-white font-bold text-sm">
+                        {formatTime(selectedSlot.startTime)} - {formatTime(selectedSlot.endTime)}
+                      </span>
                     </div>
                   )}
                   <div className="pt-4 border-t border-white/5 space-y-3">
@@ -359,11 +450,13 @@ export default function BookingFlow() {
                 <div className="space-y-3 mb-5">
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-slate-600">April {selectedDay}, 2026</span>
+                    <span className="font-semibold text-slate-600">{format(selectedDate, 'MMMM d, yyyy')}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-slate-600">{selectedTime}</span>
+                    <span className="font-semibold text-slate-600">
+                      {selectedSlot ? `${formatTime(selectedSlot.startTime)} - ${formatTime(selectedSlot.endTime)}` : selectedTime}
+                    </span>
                   </div>
                 </div>
                 <div className="border-t border-slate-100 pt-4 space-y-2.5 mb-5">
@@ -454,7 +547,7 @@ export default function BookingFlow() {
                   <p className="font-black text-slate-900">
                     {bookingResult
                       ? `${bookingResult.clientLocalDate} · ${bookingResult.clientLocalStartTime} - ${bookingResult.clientLocalEndTime} (${bookingResult.clientTimezone || 'UTC'})`
-                      : `April ${selectedDay} · ${selectedTime}`}
+                      : `${format(selectedDate, 'MMMM d')} · ${selectedSlot ? `${formatTime(selectedSlot.startTime)} - ${formatTime(selectedSlot.endTime)}` : selectedTime}`}
                   </p>
                 </div>
                 <div className="w-px h-8 bg-slate-200 hidden sm:block" />
@@ -471,12 +564,16 @@ export default function BookingFlow() {
               transition={{ delay: 0.45 }}
               className="flex flex-col sm:flex-row gap-3 justify-center"
             >
-              <Button size="lg" className="h-12 rounded-2xl px-10 font-bold shadow-lg shadow-slate-900/10" asChild>
+              {bookingResult?.meetingId && (
+                <Button size="lg" className="h-12 rounded-2xl px-10 font-bold bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 gap-2" asChild>
+                  <Link to={`/session/${bookingResult.meetingId}`} state={{ bookingId: bookingResult.id }}>
+                    <Play className="w-4 h-4 fill-current" />
+                    Join Session Now
+                  </Link>
+                </Button>
+              )}
+              <Button size="lg" variant={bookingResult?.meetingId ? "outline" : "default"} className="h-12 rounded-2xl px-10 font-bold shadow-lg shadow-slate-900/10" asChild>
                 <Link to="/dashboard">Go to Dashboard</Link>
-              </Button>
-              <Button variant="outline" size="lg" className="h-12 rounded-2xl px-10 font-bold border-slate-200 hover:bg-slate-50 gap-2">
-                <Calendar className="w-4 h-4" />
-                Add to Calendar
               </Button>
             </motion.div>
           </motion.div>

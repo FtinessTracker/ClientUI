@@ -1,98 +1,283 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, Plus, Trash2, Video, MapPin, ChevronLeft, ChevronRight, User, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, MoveHorizontal as MoreHorizontal } from 'lucide-react';
-import { format, addDays, startOfWeek, isSameDay, isToday, isPast } from 'date-fns';
+import {
+  Calendar, Clock, Plus, Trash2, Video, MapPin,
+  ChevronLeft, ChevronRight, CheckCircle, AlertCircle,
+  Globe, Send, X, CalendarPlus, Loader2, Play, Users as UsersIcon,
+  MoveHorizontal as MoreHorizontal,
+} from 'lucide-react';
+import { format, addDays, startOfWeek, isSameDay, isToday, isPast, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isBefore } from 'date-fns';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
-import { trainerService } from '../../services/trainerService';
 import { useAppUser } from '../../hooks/useAppUser';
-import { BookingRow, AvailabilitySlotRow } from '../../types/trainer';
+import { API_BASE_URL } from '../../config';
+import { getSystemTimezone } from '../../lib/timezone';
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const TIMES = [
-  '06:00', '07:00', '08:00', '09:00', '10:00', '11:00',
-  '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00',
-];
-
-const STATUS_CONFIG = {
-  upcoming: { label: 'Upcoming', color: 'text-blue-600', bg: 'bg-blue-50', icon: AlertCircle },
-  confirmed: { label: 'Confirmed', color: 'text-emerald-600', bg: 'bg-emerald-50', icon: CheckCircle },
-  completed: { label: 'Done', color: 'text-slate-500', bg: 'bg-slate-100', icon: CheckCircle },
-  cancelled: { label: 'Cancelled', color: 'text-red-500', bg: 'bg-red-50', icon: XCircle },
-  no_show: { label: 'No Show', color: 'text-orange-500', bg: 'bg-orange-50', icon: XCircle },
-};
-
-const CLIENT_AVATARS = [
-  'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=60',
-  'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=60',
-  'https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&cs=tinysrgb&w=60',
-  'https://images.pexels.com/photos/415829/pexels-photo-415829.jpeg?auto=compress&cs=tinysrgb&w=60',
-  'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=60',
-];
-
-function getAvatarForClient(clientId: string) {
-  const hash = clientId.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return CLIENT_AVATARS[hash % CLIENT_AVATARS.length];
+// ─── Types ───────────────────────────────────────────────────────────────────
+interface AvailabilityWindow {
+  date: string;       // "2026-04-10"
+  startTime: string;  // "08:00"
+  endTime: string;    // "12:00"
 }
 
+interface SubmitPayload {
+  trainerId: string;
+  timezone: string;
+  availabilityWindows: AvailabilityWindow[];
+}
+
+// Matches the actual API response shape
+interface ApiWindowEntry {
+  windowId: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface ApiAvailabilityDay {
+  date: string;
+  window: ApiWindowEntry[];
+}
+
+// Flattened for display
+interface ExistingWindow {
+  date: string;
+  windowId: string;
+  startTime: string;
+  endTime: string;
+}
+
+interface TodayBooking {
+  id: string;
+  bookingId?: string; // Support both id and bookingId
+  clientId?: string;  // Added for video join
+  trainerId?: string; // Added for video join
+  clientName: string;
+  clientAvatar?: string;
+  date?: string; // Optional for today, required for upcoming
+  startTime: string;
+  endTime: string;
+  meetingId?: string;
+  status: string;
+}
+
+interface TodayBookingsResponse {
+  trainerId: string;
+  totalBookings: number;
+  bookings: TodayBooking[];
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TIMES = Array.from({ length: 48 }, (_, i) => {
+  const hour = Math.floor(i / 2);
+  const min = i % 2 === 0 ? '00' : '30';
+  return `${String(hour).padStart(2, '0')}:${min}`;
+});
+
+function formatTimeLabel(t: string) {
+  const [h, m] = t.split(':');
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
 export default function TrainerSchedule() {
   const navigate = useNavigate();
   const { appUser } = useAppUser();
   const queryClient = useQueryClient();
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [selectedDay, setSelectedDay] = useState(new Date());
-  const [showAvailabilityModal, setShowAvailabilityModal] = useState(false);
-  const [newSlot, setNewSlot] = useState({ day_of_week: 1, start_time: '09:00', end_time: '10:00' });
-  const [activeTab, setActiveTab] = useState<'calendar' | 'availability'>('calendar');
-  const [actionMenuId, setActionMenuId] = useState<string | null>(null);
 
-  const weekStart = startOfWeek(addDays(new Date(), weekOffset * 7));
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const trainerId = appUser?.id || '';
+  const timezone = getSystemTimezone();
 
-  const { data: bookings = [] } = useQuery({
-    queryKey: ['bookings', appUser?.id],
-    queryFn: () => trainerService.getBookings(appUser!.id),
-    enabled: !!appUser,
+  // Calendar state
+  const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+
+  // Staged availability windows (the "cart")
+  const [stagedWindows, setStagedWindows] = useState<AvailabilityWindow[]>([]);
+
+  // Add-window form
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newStart, setNewStart] = useState('09:00');
+  const [newEnd, setNewEnd] = useState('12:00');
+
+  // Success state
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  // ─── Fetch existing availability ─────────────────────────────────────────
+  const fetchStartDate = format(startOfMonth(calendarMonth), 'yyyy-MM-dd');
+  const fetchEndDate = format(endOfMonth(calendarMonth), 'yyyy-MM-dd');
+
+  const { data: existingData, isLoading: isLoadingExisting } = useQuery({
+    queryKey: ['trainer-availability', trainerId, fetchStartDate, fetchEndDate],
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_BASE_URL}/api/trainer/${trainerId}/availability?startDate=${fetchStartDate}&endDate=${fetchEndDate}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) return { availabilityWindow: [] };
+      return res.json();
+    },
+    enabled: !!trainerId,
   });
 
-  const { data: availability = [] } = useQuery({
-    queryKey: ['availability', appUser?.id],
-    queryFn: () => trainerService.getAvailability(appUser!.id),
-    enabled: !!appUser,
+  // ─── Fetch today's bookings ──────────────────────────────────────────────
+  const { data: todayBookingsData, isLoading: isLoadingToday } = useQuery<TodayBookingsResponse>({
+    queryKey: ['trainer-bookings-today', trainerId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/trainer/${trainerId}/bookings/today`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return { trainerId, totalBookings: 0, bookings: [] };
+      return res.json();
+    },
+    enabled: !!trainerId,
   });
 
-  const addSlotMutation = useMutation({
-    mutationFn: (slot: Omit<AvailabilitySlotRow, 'id' | 'created_at'>) =>
-      trainerService.addAvailabilitySlot(slot),
+  // ─── Fetch upcoming bookings ──────────────────────────────────────────
+  const { data: upcomingBookingsData, isLoading: isLoadingUpcoming } = useQuery<TodayBookingsResponse>({
+    queryKey: ['trainer-bookings-upcoming', trainerId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE_URL}/api/trainer/${trainerId}/bookings/upcoming`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return { trainerId, totalBookings: 0, bookings: [] };
+      return res.json();
+    },
+    enabled: !!trainerId,
+  });
+
+  // Flatten the nested API response into a flat array
+  const existingWindows: ExistingWindow[] = useMemo(() => {
+    const days: ApiAvailabilityDay[] = existingData?.availabilityWindow || [];
+    const flat: ExistingWindow[] = [];
+    days.forEach(day => {
+      (day.window || []).forEach(w => {
+        flat.push({
+          date: day.date,
+          windowId: w.windowId,
+          startTime: w.startTime,
+          endTime: w.endTime,
+        });
+      });
+    });
+    return flat;
+  }, [existingData]);
+
+  // ─── Submit mutation ─────────────────────────────────────────────────────
+  const submitMutation = useMutation({
+    mutationFn: async (payload: SubmitPayload) => {
+      const res = await fetch(`${API_BASE_URL}/api/trainer/${trainerId}/availability`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err || 'Failed to save availability');
+      }
+      return res.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['availability'] });
-      setShowAvailabilityModal(false);
+      queryClient.invalidateQueries({ queryKey: ['trainer-availability', trainerId] });
+      setStagedWindows([]);
+      setSelectedDates([]);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
     },
   });
 
-  const deleteSlotMutation = useMutation({
-    mutationFn: (id: string) => trainerService.deleteAvailabilitySlot(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['availability'] }),
-  });
+  // ─── Calendar Helpers ────────────────────────────────────────────────────
+  const monthStart = startOfMonth(calendarMonth);
+  const monthEnd = endOfMonth(calendarMonth);
+  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const startPadding = getDay(monthStart); // 0=Sun
 
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: BookingRow['status'] }) =>
-      trainerService.updateBookingStatus(id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      setActionMenuId(null);
-    },
-  });
+  const toggleDate = (dateStr: string) => {
+    setSelectedDates(prev =>
+      prev.includes(dateStr)
+        ? prev.filter(d => d !== dateStr)
+        : [...prev, dateStr]
+    );
+  };
 
-  const selectedDayBookings = bookings.filter(b =>
-    isSameDay(new Date(b.scheduled_at), selectedDay)
-  ).sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
+  // ─── Overlap check helper ─────────────────────────────────────────────────
+  const hasOverlap = (date: string, start: string, end: string) => {
+    // Check against published windows
+    const publishedOnDate = existingWindows.filter(w => w.date === date);
+    for (const w of publishedOnDate) {
+      if (start < w.endTime && end > w.startTime) return true;
+    }
+    // Check against already-staged windows
+    const stagedOnDate = stagedWindows.filter(w => w.date === date);
+    for (const w of stagedOnDate) {
+      if (start < w.endTime && end > w.startTime) return true;
+    }
+    return false;
+  };
 
-  const upcomingBookings = bookings.filter(b =>
-    (b.status === 'upcoming' || b.status === 'confirmed') && !isPast(new Date(b.scheduled_at))
-  ).slice(0, 8);
+  // ─── Add windows for all selected dates ──────────────────────────────────
+  const [overlapWarning, setOverlapWarning] = useState<string[]>([]);
+
+  const addWindowsForSelectedDates = () => {
+    if (selectedDates.length === 0) return;
+    if (newStart >= newEnd) return;
+
+    const added: AvailabilityWindow[] = [];
+    const skipped: string[] = [];
+
+    selectedDates.forEach(date => {
+      if (hasOverlap(date, newStart, newEnd)) {
+        skipped.push(date);
+      } else {
+        added.push({ date, startTime: newStart, endTime: newEnd });
+      }
+    });
+
+    if (skipped.length > 0) {
+      setOverlapWarning(skipped);
+      setTimeout(() => setOverlapWarning([]), 4000);
+    }
+
+    if (added.length > 0) {
+      setStagedWindows(prev => [...prev, ...added]);
+    }
+    setShowAddForm(false);
+    setSelectedDates([]);
+  };
+
+  const removeStaged = (index: number) => {
+    setStagedWindows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = () => {
+    if (stagedWindows.length === 0) return;
+    submitMutation.mutate({
+      trainerId,
+      timezone,
+      availabilityWindows: stagedWindows,
+    });
+  };
+
+  // Group existing windows by date
+  const groupedExisting = useMemo(() => {
+    const days: ApiAvailabilityDay[] = existingData?.availabilityWindow || [];
+    return days
+      .map(day => ({
+        date: day.date,
+        windows: day.window || [],
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [existingData]);
+
+  // Dates that have staged windows (for calendar dots)
+  const stagedDateSet = new Set(stagedWindows.map(w => w.date));
+  const existingDateSet = new Set(existingWindows.map(w => w.date));
 
   return (
     <div className="space-y-6">
@@ -103,359 +288,531 @@ export default function TrainerSchedule() {
         className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900">Schedule</h1>
-          <p className="text-slate-400 font-medium mt-1">Manage your sessions and availability</p>
+          <h1 className="text-3xl font-black tracking-tighter text-slate-900">My Schedule</h1>
+          <p className="text-slate-400 font-medium mt-1 flex items-center gap-2">
+            <Globe className="w-4 h-4" />
+            Set your available hours · {timezone}
+          </p>
         </div>
         <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setShowAvailabilityModal(true)}
-            className="rounded-2xl font-bold border-slate-200 gap-2"
-          >
-            <Clock className="w-4 h-4" />
-            Set Availability
-          </Button>
+          {stagedWindows.length > 0 && (
+            <Button
+              onClick={handleSubmit}
+              disabled={submitMutation.isPending}
+              className="rounded-2xl font-black bg-accent hover:bg-emerald-600 text-white gap-2 shadow-lg shadow-accent/25 transition-all hover:scale-[1.02] active:scale-95"
+            >
+              {submitMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Publish {stagedWindows.length} Slot{stagedWindows.length > 1 ? 's' : ''}
+            </Button>
+          )}
         </div>
       </motion.div>
 
-      {/* Tab Toggle */}
-      <div className="flex bg-slate-100 rounded-2xl p-1 w-fit">
-        {(['calendar', 'availability'] as const).map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              'px-5 py-2 rounded-xl font-bold text-sm capitalize transition-all',
-              activeTab === tab ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            )}
-          >
-            {tab === 'calendar' ? 'Calendar View' : 'Availability'}
-          </button>
-        ))}
-      </div>
-
-      <AnimatePresence mode="wait">
-        {activeTab === 'calendar' && (
+      {/* Success Toast */}
+      <AnimatePresence>
+        {showSuccess && (
           <motion.div
-            key="calendar"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-4 rounded-2xl font-bold text-sm shadow-lg"
           >
-            {/* Weekly Calendar */}
-            <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              {/* Week Navigation */}
-              <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <p className="font-black text-slate-900 text-lg">
-                    {format(weekStart, 'MMMM yyyy')}
-                  </p>
-                  <p className="text-slate-400 text-sm font-medium">
-                    Week of {format(weekStart, 'MMM d')}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setWeekOffset(w => w - 1)}
-                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-                  >
-                    <ChevronLeft className="w-5 h-5 text-slate-600" />
-                  </button>
-                  <button
-                    onClick={() => { setWeekOffset(0); setSelectedDay(new Date()); }}
-                    className="px-3 py-1.5 text-xs font-bold text-accent border border-accent/20 bg-accent/5 rounded-lg"
-                  >
-                    Today
-                  </button>
-                  <button
-                    onClick={() => setWeekOffset(w => w + 1)}
-                    className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-                  >
-                    <ChevronRight className="w-5 h-5 text-slate-600" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Day Columns */}
-              <div className="grid grid-cols-7">
-                {weekDays.map((day) => {
-                  const dayBookings = bookings.filter(b => isSameDay(new Date(b.scheduled_at), day));
-                  const isSelected = isSameDay(day, selectedDay);
-                  const today = isToday(day);
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      onClick={() => setSelectedDay(day)}
-                      className={cn(
-                        'p-3 text-center border-r border-slate-100 last:border-r-0 transition-all hover:bg-slate-50 min-h-[100px] flex flex-col items-center',
-                        isSelected && 'bg-accent/5'
-                      )}
-                    >
-                      <p className={cn(
-                        'text-xs font-bold uppercase tracking-wider mb-2',
-                        today ? 'text-accent' : 'text-slate-400'
-                      )}>
-                        {DAYS[day.getDay()]}
-                      </p>
-                      <div className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black mb-2 transition-all',
-                        isSelected ? 'bg-accent text-white shadow-lg shadow-accent/30' :
-                        today ? 'bg-slate-900 text-white' : 'text-slate-700'
-                      )}>
-                        {format(day, 'd')}
-                      </div>
-                      <div className="flex flex-col gap-1 w-full">
-                        {dayBookings.slice(0, 3).map(b => (
-                          <div
-                            key={b.id}
-                            className={cn(
-                              'w-full h-1.5 rounded-full',
-                              b.status === 'confirmed' || b.status === 'upcoming' ? 'bg-accent' :
-                              b.status === 'completed' ? 'bg-slate-300' : 'bg-red-300'
-                            )}
-                          />
-                        ))}
-                        {dayBookings.length > 3 && (
-                          <p className="text-[10px] text-slate-400 font-bold">+{dayBookings.length - 3}</p>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Day Detail */}
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-slate-100">
-                <p className="font-black text-slate-900">{format(selectedDay, 'EEEE')}</p>
-                <p className="text-slate-400 font-medium text-sm">{format(selectedDay, 'MMMM d, yyyy')}</p>
-              </div>
-              <div className="p-4 space-y-3 overflow-y-auto max-h-[340px]">
-                {selectedDayBookings.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Calendar className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-slate-400 font-bold text-sm">No sessions scheduled</p>
-                    <p className="text-slate-300 text-xs mt-1">Free day!</p>
-                  </div>
-                ) : (
-                  selectedDayBookings.map(booking => {
-                    const status = STATUS_CONFIG[booking.status];
-                    const StatusIcon = status.icon;
-                    return (
-                      <div key={booking.id} className="relative p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex items-center gap-2.5">
-                            <img
-                              src={getAvatarForClient(booking.client_clerk_id)}
-                              alt=""
-                              className="w-9 h-9 rounded-xl object-cover"
-                            />
-                            <div>
-                              <p className="font-bold text-slate-900 text-sm">{booking.client_name}</p>
-                              <p className="text-slate-400 text-xs font-medium">
-                                {format(new Date(booking.scheduled_at), 'h:mm a')} · {booking.duration_minutes}min
-                              </p>
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <button
-                              onClick={() => setActionMenuId(actionMenuId === booking.id ? null : booking.id)}
-                              className="p-1.5 hover:bg-slate-200 rounded-lg transition-colors"
-                            >
-                              <MoreHorizontal className="w-4 h-4 text-slate-400" />
-                            </button>
-                            <AnimatePresence>
-                              {actionMenuId === booking.id && (
-                                <motion.div
-                                  initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.9 }}
-                                  className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden w-44 z-20"
-                                >
-                                  {['confirmed', 'completed', 'cancelled', 'no_show'].map(s => (
-                                    <button
-                                      key={s}
-                                      onClick={() => updateStatusMutation.mutate({ id: booking.id, status: s as BookingRow['status'] })}
-                                      className="w-full px-4 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50 capitalize"
-                                    >
-                                      Mark as {s.replace('_', ' ')}
-                                    </button>
-                                  ))}
-                                </motion.div>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            {booking.session_type === 'virtual' ? (
-                              <Video className="w-3.5 h-3.5 text-slate-400" />
-                            ) : (
-                              <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                            )}
-                            <span className="text-xs text-slate-400 font-medium capitalize">{booking.session_type}</span>
-                          </div>
-                          <span className={cn('text-xs font-bold flex items-center gap-1 px-2.5 py-1 rounded-full', status.bg, status.color)}>
-                            <StatusIcon className="w-3 h-3" />
-                            {status.label}
-                          </span>
-                        </div>
-                        {booking.session_type === 'virtual' && (
-                          <button
-                            onClick={() => navigate(`/session/${booking.id}`)}
-                            className="mt-3 w-full flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2.5 rounded-xl transition-colors"
-                          >
-                            <Video className="w-3.5 h-3.5" />
-                            Start Session
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
+            <CheckCircle className="w-5 h-5 text-emerald-500" />
+            Availability published successfully!
           </motion.div>
         )}
+      </AnimatePresence>
 
-        {activeTab === 'availability' && (
+      {/* Error */}
+      {submitMutation.isError && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-2xl font-bold text-sm">
+          <AlertCircle className="w-5 h-5 text-red-400" />
+          {submitMutation.error?.message || 'Something went wrong. Please try again.'}
+        </div>
+      )}
+
+      {/* Overlap Warning */}
+      <AnimatePresence>
+        {overlapWarning.length > 0 && (
           <motion.div
-            key="availability"
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 px-6 py-4 rounded-2xl font-bold text-sm"
+          >
+            <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p>Skipped {overlapWarning.length} date{overlapWarning.length > 1 ? 's' : ''} — overlapping with existing availability:</p>
+              <p className="text-amber-600 text-xs font-medium mt-1">
+                {overlapWarning.map(d => format(new Date(d + 'T12:00:00'), 'MMM d')).join(', ')}
+              </p>
+            </div>
+            <button onClick={() => setOverlapWarning([])} className="ml-auto text-amber-400 hover:text-amber-600 transition-colors shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="grid lg:grid-cols-12 gap-6">
+        {/* ─── Calendar + Date Picker ─────────────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.05, duration: 0.5 }}
+          className="lg:col-span-5 bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+        >
+          {/* Month Navigation */}
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-1">Select Dates</p>
+              <p className="font-black text-slate-900 text-xl tracking-tight">
+                {format(calendarMonth, 'MMMM yyyy')}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all active:scale-90"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+              </button>
+              <button
+                onClick={() => setCalendarMonth(new Date())}
+                className="px-3 py-1.5 text-[10px] font-black text-accent border border-accent/20 bg-accent/5 rounded-lg uppercase tracking-widest hover:bg-accent/10 transition-all"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 transition-all active:scale-90"
+              >
+                <ChevronRight className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="p-5">
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {DAYS_SHORT.map(d => (
+                <div key={d} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-2">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Day Cells */}
+            <div className="grid grid-cols-7 gap-1">
+              {/* Padding for days before month starts */}
+              {Array.from({ length: startPadding }).map((_, i) => (
+                <div key={`pad-${i}`} className="h-12" />
+              ))}
+
+              {calendarDays.map(day => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const isSelected = selectedDates.includes(dateStr);
+                const isPastDay = isBefore(day, new Date()) && !isToday(day);
+                const hasStaged = stagedDateSet.has(dateStr);
+                const hasExisting = existingDateSet.has(dateStr);
+                const today = isToday(day);
+
+                return (
+                  <button
+                    key={dateStr}
+                    disabled={isPastDay}
+                    onClick={() => toggleDate(dateStr)}
+                    className={cn(
+                      "relative h-12 flex flex-col items-center justify-center rounded-xl transition-all duration-200 group",
+                      isPastDay && "opacity-30 cursor-not-allowed",
+                      isSelected
+                        ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20 scale-105"
+                        : today
+                          ? "bg-accent/10 text-accent font-black hover:bg-accent/20"
+                          : "hover:bg-slate-50 text-slate-700 active:scale-95"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-sm font-bold",
+                      isSelected && "text-white",
+                      today && !isSelected && "text-accent"
+                    )}>
+                      {format(day, 'd')}
+                    </span>
+
+                    {/* Indicator dots */}
+                    <div className="flex gap-0.5 mt-0.5">
+                      {hasExisting && (
+                        <div className={cn(
+                          "w-1 h-1 rounded-full",
+                          isSelected ? "bg-emerald-400" : "bg-emerald-500"
+                        )} />
+                      )}
+                      {hasStaged && (
+                        <div className={cn(
+                          "w-1 h-1 rounded-full",
+                          isSelected ? "bg-amber-400" : "bg-amber-500"
+                        )} />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="flex items-center gap-4 mt-5 pt-4 border-t border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Published</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected dates action */}
+          <AnimatePresence>
+            {selectedDates.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-t border-slate-100"
+              >
+                <div className="p-5">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-black text-slate-900">
+                      {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''} selected
+                    </p>
+                    <button
+                      onClick={() => setSelectedDates([])}
+                      className="text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {selectedDates.sort().map(d => (
+                      <span
+                        key={d}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-[11px] font-bold rounded-lg"
+                      >
+                        {format(new Date(d + 'T12:00:00'), 'MMM d')}
+                        <button onClick={() => toggleDate(d)} className="text-slate-400 hover:text-red-500 transition-colors">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  <Button
+                    onClick={() => setShowAddForm(true)}
+                    className="w-full rounded-2xl font-black gap-2 bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all active:scale-95"
+                  >
+                    <CalendarPlus className="w-4 h-4" />
+                    Add Time Window
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* ─── Right Column: Today's Sessions + Staged + Existing ─────────── */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Today's Sessions */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
             className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
           >
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h2 className="font-black text-slate-900 text-lg">Weekly Availability</h2>
-                <p className="text-slate-400 text-sm font-medium mt-0.5">Your recurring weekly schedule</p>
+                <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-1">Live Schedule</p>
+                <h2 className="font-black text-slate-900 text-lg tracking-tight">Today's Sessions</h2>
               </div>
-              <Button
-                onClick={() => setShowAvailabilityModal(true)}
-                className="rounded-2xl font-bold gap-2 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Slot
-              </Button>
+              <div className="flex items-center gap-1.5 bg-accent/5 text-accent px-3 py-1 rounded-full text-[10px] font-black tracking-widest border border-accent/10">
+                {todayBookingsData?.totalBookings || 0} SESSIONS
+              </div>
             </div>
-            <div className="p-6">
-              {availability.length === 0 ? (
-                <div className="text-center py-16">
-                  <Clock className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-                  <p className="text-slate-500 font-bold">No availability set yet</p>
-                  <p className="text-slate-300 text-sm mt-1 mb-6">Add time blocks when you're available to train clients</p>
-                  <Button onClick={() => setShowAvailabilityModal(true)} className="rounded-2xl font-bold gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Your First Slot
-                  </Button>
+
+            <div className="p-5">
+              {isLoadingToday ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-2" />
+                  <p className="text-slate-400 text-xs font-medium">Loading today's schedule...</p>
+                </div>
+              ) : !todayBookingsData?.bookings || todayBookingsData.bookings.length === 0 ? (
+                <div className="flex items-center gap-4 p-5 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <Calendar className="w-5 h-5 text-slate-300" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-500">No sessions scheduled for today</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Your agenda is clear! Use this time to update your availability.</p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {DAYS.map((day, idx) => {
-                    const daySlots = availability.filter(s => s.day_of_week === idx);
-                    if (daySlots.length === 0) return null;
-                    return (
-                      <div key={day} className="flex items-start gap-4 p-4 bg-slate-50 rounded-2xl">
-                        <div className="w-12 shrink-0">
-                          <p className="font-black text-slate-900 text-sm">{day}</p>
+                  {todayBookingsData.bookings.map(booking => (
+                    <div key={booking.id} className="flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:shadow-md transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shrink-0">
+                          {booking.clientAvatar ? (
+                            <img src={booking.clientAvatar} alt={booking.clientName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                              <UsersIcon className="w-6 h-6" />
+                            </div>
+                          )}
                         </div>
-                        <div className="flex flex-wrap gap-2 flex-1">
-                          {daySlots.map(slot => (
+                        <div>
+                          <p className="font-black text-slate-900">{booking.clientName}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Clock className="w-3 h-3 text-accent" />
+                            <span className="text-xs font-bold text-slate-400">
+                              {formatTimeLabel(booking.startTime)} – {formatTimeLabel(booking.endTime)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(booking.meetingId || booking.bookingId || booking.id) && (
+                          <Button 
+                            className="h-9 px-4 rounded-xl text-xs font-black gap-2 bg-accent hover:bg-emerald-600 shadow-sm"
+                            onClick={() => {
+                              const roomId = booking.meetingId || booking.bookingId || booking.id;
+                              navigate(`/session/${roomId}`, { 
+                                state: { 
+                                  bookingId: booking.bookingId || booking.id,
+                                  meetingId: booking.meetingId,
+                                  trainerId: booking.trainerId || todayBookingsData?.trainerId,
+                                  clientId: booking.clientId
+                                } 
+                              });
+                            }}
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            Join
+                          </Button>
+                        )}
+                        <Button variant="ghost" className="w-9 h-9 p-0 rounded-xl hover:bg-slate-50">
+                          <MoreHorizontal className="w-4 h-4 text-slate-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Upcoming Sessions */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          >
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1">Coming Up</p>
+                <h2 className="font-black text-slate-900 text-lg tracking-tight">Upcoming Sessions</h2>
+              </div>
+              <div className="flex items-center gap-1.5 bg-slate-50 text-slate-500 px-3 py-1 rounded-full text-[10px] font-black tracking-widest border border-slate-100">
+                {upcomingBookingsData?.totalBookings || 0} TOTAL
+              </div>
+            </div>
+
+            <div className="p-5">
+              {isLoadingUpcoming ? (
+                <div className="text-center py-8">
+                  <Loader2 className="w-6 h-6 text-slate-200 animate-spin mx-auto mb-2" />
+                  <p className="text-slate-400 text-xs font-medium">Checking your future agenda...</p>
+                </div>
+              ) : !upcomingBookingsData?.bookings || upcomingBookingsData.bookings.length === 0 ? (
+                <div className="flex items-center gap-4 p-5 bg-slate-50/20 rounded-2xl border border-dashed border-slate-100">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm">
+                    <CalendarPlus className="w-5 h-5 text-slate-200" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-400">No and upcoming sessions</p>
+                    <p className="text-[11px] text-slate-400/70 font-medium">When clients book your newly added slots, they'll appear here.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingBookingsData.bookings.map(booking => (
+                    <div key={booking.id || booking.bookingId} className="flex items-center justify-between p-4 bg-slate-50/30 border border-slate-100 rounded-2xl hover:bg-white hover:shadow-md transition-all group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-white border border-slate-200 shrink-0 shadow-sm">
+                          {booking.clientAvatar ? (
+                            <img src={booking.clientAvatar} alt={booking.clientName} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-slate-50 text-slate-300">
+                              <UsersIcon className="w-6 h-6" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <p className="font-black text-slate-900">{booking.clientName}</p>
+                            <span className="px-1.5 py-0.5 bg-accent/10 text-accent text-[9px] font-black rounded uppercase tracking-wider">
+                              {booking.status}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <Calendar className="w-3 h-3 text-slate-400" />
+                              <span className="text-[11px] font-black text-slate-500 uppercase tracking-wide">
+                                {booking.date ? format(new Date(booking.date + 'T12:00:00'), 'EEE, MMM d') : 'No Date'}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span className="text-[11px] font-bold text-slate-400">
+                                {formatTimeLabel(booking.startTime)} – {formatTimeLabel(booking.endTime)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {(booking.meetingId || booking.bookingId || booking.id) && (
+                          <Button 
+                            className="h-9 px-4 rounded-xl text-xs font-black gap-2 bg-accent hover:bg-emerald-600 shadow-sm"
+                            onClick={() => {
+                              const roomId = booking.meetingId || booking.bookingId || booking.id;
+                              navigate(`/session/${roomId}`, { 
+                                state: { 
+                                  bookingId: booking.bookingId || booking.id,
+                                  meetingId: booking.meetingId,
+                                  trainerId: booking.trainerId || upcomingBookingsData?.trainerId,
+                                  clientId: booking.clientId
+                                } 
+                              });
+                            }}
+                          >
+                            <Play className="w-3 h-3 fill-current" />
+                            Join
+                          </Button>
+                        )}
+                        <Button variant="ghost" className="w-9 h-9 p-0 rounded-xl hover:bg-white hover:shadow-sm">
+                          <MoreHorizontal className="w-4 h-4 text-slate-300" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+
+
+          {/* Existing Published Availability */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
+          >
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] mb-1">Active</p>
+                <h2 className="font-black text-slate-900 text-lg tracking-tight">Published Availability</h2>
+              </div>
+              {existingWindows.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest border border-emerald-100">
+                  {existingWindows.length} SLOTS
+                </div>
+              )}
+            </div>
+
+            <div className="p-5">
+              {isLoadingExisting ? (
+                <div className="text-center py-12">
+                  <Loader2 className="w-8 h-8 text-slate-300 animate-spin mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm font-medium">Loading availability...</p>
+                </div>
+              ) : groupedExisting.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                    <Calendar className="w-8 h-8 text-slate-200" />
+                  </div>
+                  <p className="text-slate-400 text-sm font-bold mb-1">No availability published yet</p>
+                  <p className="text-slate-300 text-xs">Your published time slots will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+                  {groupedExisting.map(({ date, windows }) => {
+                    const dateObj = new Date(date + 'T12:00:00');
+                    const isPastDate = isBefore(dateObj, new Date()) && !isToday(dateObj);
+                    return (
+                      <div
+                        key={date}
+                        className={cn(
+                          "bg-slate-50 rounded-2xl p-4 border border-slate-100 transition-all",
+                          isPastDate && "opacity-50"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-2.5">
+                          <p className="text-xs font-black text-slate-700 uppercase tracking-widest">
+                            {format(dateObj, 'EEE, MMM d')}
+                          </p>
+                          {isPastDate && (
+                            <span className="text-[9px] font-black text-slate-400 bg-slate-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                              Past
+                            </span>
+                          )}
+                          {isToday(dateObj) && (
+                            <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100">
+                              Today
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {windows.map((w, idx) => (
                             <div
-                              key={slot.id}
-                              className="flex items-center gap-2 px-3.5 py-2 bg-white rounded-xl border border-slate-200 text-sm font-bold text-slate-700"
+                              key={idx}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-xl border border-slate-200 text-sm font-bold text-slate-600"
                             >
-                              <Clock className="w-3.5 h-3.5 text-accent" />
-                              {slot.start_time} – {slot.end_time}
-                              <button
-                                onClick={() => deleteSlotMutation.mutate(slot.id)}
-                                className="ml-1 text-slate-400 hover:text-red-500 transition-colors"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              <Clock className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>{formatTimeLabel(w.startTime)}</span>
+                              <span className="text-slate-300">–</span>
+                              <span>{formatTimeLabel(w.endTime)}</span>
                             </div>
                           ))}
                         </div>
                       </div>
                     );
-                  }).filter(Boolean)}
+                  })}
                 </div>
               )}
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Upcoming Sessions quick list */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden"
-      >
-        <div className="p-6 border-b border-slate-100">
-          <h2 className="font-black text-slate-900 text-lg">Upcoming Sessions</h2>
         </div>
-        {upcomingBookings.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 font-medium">No upcoming sessions</div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {upcomingBookings.map(booking => {
-              const status = STATUS_CONFIG[booking.status];
-              const StatusIcon = status.icon;
-              const date = new Date(booking.scheduled_at);
-              return (
-                <div key={booking.id} className="px-6 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors">
-                  <div className="w-14 shrink-0 text-center">
-                    <p className="text-xs font-bold text-slate-400 uppercase">{format(date, 'EEE')}</p>
-                    <p className="text-2xl font-black text-slate-900 leading-none">{format(date, 'd')}</p>
-                    <p className="text-xs font-bold text-slate-400">{format(date, 'MMM')}</p>
-                  </div>
-                  <div className="w-px h-10 bg-slate-100 shrink-0" />
-                  <img
-                    src={getAvatarForClient(booking.client_clerk_id)}
-                    alt=""
-                    className="w-10 h-10 rounded-xl object-cover shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900 truncate">{booking.client_name}</p>
-                    <p className="text-sm text-slate-400 font-medium">{format(date, 'h:mm a')} · {booking.duration_minutes} min</p>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className={cn('text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5', status.bg, status.color)}>
-                      <StatusIcon className="w-3 h-3" />
-                      {status.label}
-                    </span>
-                    <span className="font-black text-slate-900">${booking.price}</span>
-                    {booking.session_type === 'virtual' && (
-                      <button
-                        onClick={() => navigate(`/session/${booking.id}`)}
-                        className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3 py-2 rounded-xl transition-colors"
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        Start
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </motion.div>
+      </div>
 
-      {/* Add Availability Modal */}
+      {/* ─── Add Time Window Modal ──────────────────────────────────────────── */}
       <AnimatePresence>
-        {showAvailabilityModal && (
+        {showAddForm && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={e => e.target === e.currentTarget && setShowAvailabilityModal(false)}
+            onClick={e => e.target === e.currentTarget && setShowAddForm(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -463,59 +820,108 @@ export default function TrainerSchedule() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl"
             >
-              <h3 className="text-xl font-black text-slate-900 mb-6">Add Availability Slot</h3>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-2">Day of Week</label>
-                  <select
-                    value={newSlot.day_of_week}
-                    onChange={e => setNewSlot(p => ({ ...p, day_of_week: Number(e.target.value) }))}
-                    className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent font-medium"
-                  >
-                    {DAYS.map((d, i) => <option key={d} value={i}>{d}</option>)}
-                  </select>
+                  <h3 className="text-xl font-black text-slate-900">Add Time Window</h3>
+                  <p className="text-sm text-slate-400 font-medium mt-1">
+                    Applies to {selectedDates.length} selected date{selectedDates.length > 1 ? 's' : ''}
+                  </p>
                 </div>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="w-10 h-10 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-all"
+                >
+                  <X className="w-5 h-5 text-slate-400" />
+                </button>
+              </div>
+
+              {/* Selected dates preview */}
+              <div className="flex flex-wrap gap-1.5 mb-6 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                {selectedDates.sort().map(d => (
+                  <span key={d} className="px-2.5 py-1 bg-white text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200 shadow-sm">
+                    {format(new Date(d + 'T12:00:00'), 'MMM d')}
+                  </span>
+                ))}
+              </div>
+
+              <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Start Time</label>
+                    <label className="block text-sm font-black text-slate-700 mb-2">Start Time</label>
                     <select
-                      value={newSlot.start_time}
-                      onChange={e => setNewSlot(p => ({ ...p, start_time: e.target.value }))}
-                      className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent font-medium"
+                      value={newStart}
+                      onChange={e => setNewStart(e.target.value)}
+                      className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent font-bold bg-slate-50 transition-all"
                     >
-                      {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                      {TIMES.map(t => (
+                        <option key={t} value={t}>{formatTimeLabel(t)}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">End Time</label>
+                    <label className="block text-sm font-black text-slate-700 mb-2">End Time</label>
                     <select
-                      value={newSlot.end_time}
-                      onChange={e => setNewSlot(p => ({ ...p, end_time: e.target.value }))}
-                      className="w-full border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent font-medium"
+                      value={newEnd}
+                      onChange={e => setNewEnd(e.target.value)}
+                      className="w-full border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent font-bold bg-slate-50 transition-all"
                     >
-                      {TIMES.filter(t => t > newSlot.start_time).map(t => <option key={t} value={t}>{t}</option>)}
+                      {TIMES.filter(t => t > newStart).map(t => (
+                        <option key={t} value={t}>{formatTimeLabel(t)}</option>
+                      ))}
+                      <option value="23:59">11:59 PM</option>
                     </select>
+                  </div>
+                </div>
+
+                {newStart >= newEnd && (
+                  <p className="text-red-500 text-xs font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    End time must be after start time
+                  </p>
+                )}
+
+                {/* Quick presets */}
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Quick Presets</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { label: 'Morning', start: '08:00', end: '12:00' },
+                      { label: 'Afternoon', start: '13:00', end: '17:00' },
+                      { label: 'Evening', start: '17:00', end: '21:00' },
+                      { label: 'Full Day', start: '00:00', end: '23:59' },
+                    ].map(p => (
+                      <button
+                        key={p.label}
+                        onClick={() => { setNewStart(p.start); setNewEnd(p.end); }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
+                          newStart === p.start && newEnd === p.end
+                            ? "bg-slate-900 text-white border-slate-900"
+                            : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
+
               <div className="flex gap-3 mt-8">
                 <Button
                   variant="outline"
-                  onClick={() => setShowAvailabilityModal(false)}
-                  className="flex-1 rounded-2xl font-bold"
+                  onClick={() => setShowAddForm(false)}
+                  className="flex-1 rounded-2xl font-bold border-slate-200"
                 >
                   Cancel
                 </Button>
                 <Button
-                  onClick={() => addSlotMutation.mutate({
-                    trainer_clerk_id: appUser!.id,
-                    ...newSlot,
-                    is_active: true,
-                  })}
-                  isLoading={addSlotMutation.isPending}
-                  className="flex-1 rounded-2xl font-bold"
+                  onClick={addWindowsForSelectedDates}
+                  disabled={newStart >= newEnd}
+                  className="flex-1 rounded-2xl font-black bg-slate-900 hover:bg-slate-800 text-white gap-2 transition-all"
                 >
-                  Add Slot
+                  <Plus className="w-4 h-4" />
+                  Add to {selectedDates.length} Date{selectedDates.length > 1 ? 's' : ''}
                 </Button>
               </div>
             </motion.div>

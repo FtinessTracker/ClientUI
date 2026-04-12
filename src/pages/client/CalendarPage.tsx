@@ -7,6 +7,7 @@ import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '../../config';
 import { useUser } from '@clerk/clerk-react';
 import { useQuery } from '@tanstack/react-query';
+import { getSystemTimezone } from '../../lib/timezone';
 
 interface ApiTrainerWindow {
   startTime: string;
@@ -44,6 +45,9 @@ interface SessionEvent {
   trainerBio: string;
   trainerAvailability: string[];
 }
+
+// Default avatar as inline SVG data URI (renders a clean person silhouette)
+const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23cbd5e1'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ccircle cx='50' cy='36' r='18'/%3E%3Cellipse cx='50' cy='90' rx='30' ry='24'/%3E%3C/svg%3E";
 
 const BIO_SARAH = 'Sarah is a certified yoga master with over 10 years of experience in Hatha and Yin Yoga. She focuses on breath-work and mindfulness to help clients achieve a balanced state of mind and body.';
 const BIO_MARCUS = 'Marcus is a high-performance strengthening coach who specializes in HIIT and athletic conditioning. His high-energy sessions are designed to push your limits and build functional strength.';
@@ -307,12 +311,12 @@ export default function CalendarPage() {
       duration: 'Flexible',
       trainer: t.trainerName,
       trainerId: t.trainerId,
-      trainerAvatar: t.profileImageUrl || 'https://placehold.net/avatar.png',
+      trainerAvatar: t.profileImageUrl || DEFAULT_AVATAR,
       type: 'Personal Training',
       mode: 'virtual',
       color: 'emerald',
       isBooked: false,
-      trainerBio: `Available for booking in ${t.timezone || 'your timezone'}.`,
+      trainerBio: `Available for booking in your local time (${getSystemTimezone()}).`,
       trainerAvailability: t.windows.map(w => `${w.startTime} - ${w.endTime}`)
     };
   });
@@ -345,7 +349,7 @@ export default function CalendarPage() {
       time: b.startTime,
       trainer: b.trainerName,
       trainerId: b.trainerId,
-      trainerAvatar: 'https://placehold.net/avatar.png',
+      trainerAvatar: b.trainerProfileImageUrl || DEFAULT_AVATAR,
       mode: 'virtual',
       color: 'emerald' as any
     };
@@ -554,59 +558,105 @@ export default function CalendarPage() {
                           )}
                         >
                           <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-t-[2.5rem]" />
-                          <div className="relative p-4 sm:p-6 sm:pl-8 sm:pr-10 flex flex-col sm:flex-row items-start sm:items-center justify-start gap-4 sm:gap-6 z-10">
-                            {/* 1. Profile Avatar */}
-                            <button
-                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                              className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[1.5rem] overflow-hidden shadow-inner shrink-0 ring-4 ring-slate-50 group-hover:ring-accent/10 transition-all duration-500 active:scale-95"
-                            >
-                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" />
-                            </button>
+                          <div className="relative p-4 sm:p-6 sm:pl-8 sm:pr-6 z-10">
+                            <div className="flex items-center gap-4 sm:gap-6">
+                              {/* 1. Profile Avatar */}
+                              <button
+                                onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                                className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[1.5rem] overflow-hidden shadow-inner shrink-0 ring-4 ring-slate-50 group-hover:ring-accent/10 transition-all duration-500 active:scale-95 bg-slate-100"
+                              >
+                                <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }} />
+                              </button>
 
-                            {/* 2. Trainer Details */}
-                            <div className="min-w-0 flex-1">
-                              <div className="space-y-1 mb-2 font-medium">
-                                <span className={cn(
-                                  'text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] border backdrop-blur-sm shadow-sm transition-all duration-500 whitespace-nowrap',
-                                  c.bg, c.text, "border-white"
-                                )}>
-                                  {s.type}
-                                </span>
-                                <button
-                                  onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                                  className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate max-w-full"
-                                >
-                                  {s.trainer}
-                                </button>
+                              {/* 2. Trainer Details */}
+                              <div className="min-w-0 flex-1">
+                                <div className="space-y-1 mb-2 font-medium">
+                                  <span className={cn(
+                                    'text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] border backdrop-blur-sm shadow-sm transition-all duration-500 whitespace-nowrap',
+                                    c.bg, c.text, "border-white"
+                                  )}>
+                                    {s.type}
+                                  </span>
+                                  <button
+                                    onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                                    className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate max-w-full"
+                                  >
+                                    {s.trainer}
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-3 sm:gap-4">
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <Clock className="w-3.5 h-3.5 text-slate-300" />
+                                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">{s.time}</span>
+                                  </div>
+                                  <div className="w-1 h-1 rounded-full bg-slate-200 flex-shrink-0" />
+                                  <div className="flex items-center gap-2 flex-shrink-0">
+                                    <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em] whitespace-nowrap">{s.mode}</span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-3 sm:gap-4">
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <Clock className="w-3.5 h-3.5 text-slate-300" />
-                                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">{s.time}</span>
+
+                              {/* 3. Action Buttons Group (Book/Join + Expand) */}
+                              <div className="flex items-center gap-3 shrink-0">
+                                {/* Primary Action */}
+                                <div className="hidden sm:block">
+                                  {s.isBooked ? (
+                                    s.mode === 'virtual' ? (
+                                      <button
+                                        onClick={() => navigate(`/session/${s.id}`)}
+                                        className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                      >
+                                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
+                                        <Video className="w-4 h-4 relative z-10" />
+                                        <span className="relative z-10 whitespace-nowrap">Join Now</span>
+                                        <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4 blur-xl" />
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                      </button>
+                                    ) : (
+                                      <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100">
+                                        <MapPin className="w-4 h-4" />
+                                        On Site
+                                      </div>
+                                    )
+                                  ) : (
+                                    <button
+                                      onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
+                                      className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                    >
+                                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
+                                      <Plus className="w-4 h-4 relative z-10" />
+                                      <span className="relative z-10 whitespace-nowrap">Book Now</span>
+                                    </button>
+                                  )}
                                 </div>
-                                <div className="w-1 h-1 rounded-full bg-slate-200 flex-shrink-0" />
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em] whitespace-nowrap">{s.mode}</span>
-                                </div>
+
+                                {/* Expand/collapse chevron */}
+                                <div className="h-10 w-px bg-slate-200/50 hidden sm:block" />
+                                <button
+                                  onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
+                                  className={cn(
+                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0",
+                                    isExpanded ? "bg-slate-900 text-white shadow-xl" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shadow-sm"
+                                  )}
+                                >
+                                  <ChevronDown className={cn("w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-500", isExpanded && "rotate-180")} />
+                                </button>
                               </div>
                             </div>
 
-                            {/* 3. Primary Action Buttons */}
-                            <div className="flex-shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            {/* Mobile-only full-width action button */}
+                            <div className="sm:hidden mt-3">
                               {s.isBooked ? (
                                 s.mode === 'virtual' ? (
                                   <button
                                     onClick={() => navigate(`/session/${s.id}`)}
-                                    className="relative w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                    className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg active:scale-95 group/btn overflow-hidden"
                                   >
-                                    <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
                                     <Video className="w-4 h-4 relative z-10" />
-                                    <span className="relative z-10 whitespace-nowrap">Join Now</span>
-                                    <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4 blur-xl" />
-                                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                                    <span className="relative z-10">Join Now</span>
                                   </button>
                                 ) : (
-                                  <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100 w-full sm:w-auto">
+                                  <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100 w-full">
                                     <MapPin className="w-4 h-4" />
                                     On Site
                                   </div>
@@ -614,27 +664,12 @@ export default function CalendarPage() {
                               ) : (
                                 <button
                                   onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
-                                  className="relative w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
+                                  className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg active:scale-95 group/btn overflow-hidden"
                                 >
-                                  <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
                                   <Plus className="w-4 h-4 relative z-10" />
-                                  <span className="relative z-10 whitespace-nowrap">Book Now</span>
+                                  <span className="relative z-10">Book Now</span>
                                 </button>
                               )}
-                            </div>
-
-                            {/* 4. Secondary Actions / Expansion (Anchored Right) */}
-                            <div className="ml-auto flex items-center gap-4 sm:static absolute right-4 top-4 sm:right-auto sm:top-auto">
-                              <div className="h-10 w-px bg-slate-200/50 sm:block hidden" />
-                              <button
-                                onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                                className={cn(
-                                  "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300",
-                                  isExpanded ? "bg-slate-900 text-white shadow-xl" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shadow-sm"
-                                )}
-                              >
-                                <ChevronDown className={cn("w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-500", isExpanded && "rotate-180")} />
-                              </button>
                             </div>
                           </div>
 
@@ -737,7 +772,7 @@ export default function CalendarPage() {
                               onClick={() => navigate(`/trainer/${s.trainerId}`)}
                               className="w-12 h-12 rounded-[1.2rem] overflow-hidden border-2 border-white relative bg-white transition-all active:scale-95 shrink-0 shadow-sm"
                             >
-                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" />
+                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }} />
                             </button>
                           </div>
                           <div className="min-w-0">

@@ -170,11 +170,11 @@ export default function SessionRoom() {
 
     
     try {
-      const payload = {
+      const joinPayload = {
         meetingId: roomParam,
-        bookingId: location.state?.bookingId || roomParam, // Fallback if meeting mapping is unified
-        userId: appUser?.id || 'client_001',
-        initiatedBy: appUser?.name || 'Client',
+        bookingId: location.state?.bookingId || roomParam, 
+        userId: appUser?.id || 'unknown_user',
+        initiatedBy: appUser?.name || 'User',
         initiatorRole: appUser?.role?.toUpperCase() || 'CLIENT'
       };
 
@@ -182,14 +182,14 @@ export default function SessionRoom() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(joinPayload)
       });
       
       if (!joinRes.ok) throw new Error('Failed to join video meeting session');
       const sessionData = await joinRes.json();
 
       const token = sessionData.token;
-      const resolvedRoomName = sessionData.roomName;
+      const resolvedRoomName = sessionData.roomName || `meeting_${roomParam}`;
 
       const tracks = [localVideoTrack, localAudioTrack].filter(Boolean) as (LocalVideoTrack | LocalAudioTrack)[];
 
