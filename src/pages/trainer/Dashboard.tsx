@@ -2,7 +2,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Calendar, DollarSign, Star, Clock, Video, ChevronRight, Activity, ArrowUpRight, TrendingUp, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -30,6 +30,7 @@ const CLIENT_IMAGES = [
 ];
 
 export default function TrainerDashboard() {
+  const navigate = useNavigate();
   const { appUser: user } = useAppUser();
   const { data: bookings, isLoading } = useQuery({
     queryKey: ['bookings', user?.id],
@@ -183,11 +184,23 @@ export default function TrainerDashboard() {
                     <span className="text-xs font-black text-accent bg-accent/8 px-2.5 py-1 rounded-lg border border-accent/15">4:00 PM</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button size="sm" className="h-8 text-xs rounded-xl font-bold px-4 shadow-sm" asChild>
-                      <Link to={`/session/${booking.id}`}>
-                        <Video className="w-3 h-3 mr-1.5" />
-                        Join
-                      </Link>
+                    <Button 
+                      size="sm" 
+                      className="h-8 text-xs rounded-xl font-bold px-4 shadow-sm"
+                      onClick={() => {
+                        const roomId = booking.meetingId || booking.id;
+                        navigate(`/session/${roomId}`, {
+                          state: {
+                            bookingId: booking.id,
+                            meetingId: booking.meetingId || booking.id,
+                            trainerId: user?.id,
+                            clientId: booking.clientId
+                          }
+                        });
+                      }}
+                    >
+                      <Video className="w-3 h-3 mr-1.5" />
+                      Join
                     </Button>
                     <Button variant="outline" size="sm" className="h-8 text-xs rounded-xl font-bold px-3 border-slate-200">
                       Notes

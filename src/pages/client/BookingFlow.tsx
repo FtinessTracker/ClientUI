@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Clock, CreditCard, CircleCheck as CheckCircle2, ArrowLeft, ShieldCheck, Zap, ChevronLeft, ChevronRight, Sunrise, Sun, Moon, Play, Loader as Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
-import { mockApi } from '../../services/mockApi';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/utils';
@@ -13,12 +12,6 @@ import { useUser } from '@clerk/clerk-react';
 import { getSystemTimezone } from '../../lib/timezone';
 
 type Step = 'select-slot' | 'payment' | 'confirmation';
-
-const TRAINER_IMAGES: Record<string, string> = {
-  t1: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=200',
-  t2: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=200',
-  t3: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=200',
-};
 
 const STEPS = [
   { id: 'select-slot', label: 'Schedule' },
@@ -65,20 +58,31 @@ export default function BookingFlow() {
   const { data: trainer, isLoading } = useQuery({
     queryKey: ['trainer', id],
     queryFn: async () => {
-      try {
-        return await mockApi.getTrainerById(id!);
-      } catch (err) {
-        if (id?.startsWith('user_')) {
+      const response = await fetch(`${API_BASE_URL}/api/booking/trainers/available?date=${dateStr}`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const found = data.trainers?.find((t: any) => t.trainerId === id);
+        if (found) {
           return {
-            id,
-            name: state?.trainerName || 'Selected Trainer',
-            specialties: state?.specialties || ['Personal Training'],
-            pricePerHour: 80,
-            avatar: state?.trainerAvatar || 'https://placehold.net/avatar.png'
+            id: found.trainerId,
+            name: found.trainerName,
+            specialties: ['Personal Training'], // Fallback specialty
+            pricePerHour: 80, // Default price
+            avatar: found.profileImageUrl
           };
         }
-        throw err;
       }
+      
+      // Secondary fallback from state
+      return {
+        id: id!,
+        name: state?.trainerName || 'Selected Trainer',
+        specialties: state?.specialties || ['Personal Training'],
+        pricePerHour: 80,
+        avatar: state?.trainerAvatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=trainer'
+      };
     },
   });
 
@@ -158,7 +162,7 @@ export default function BookingFlow() {
   };
 
   const currentIdx = STEPS.findIndex((s) => s.id === step);
-  const trainerImage = TRAINER_IMAGES[trainer.id] || trainer.avatar;
+  const trainerImage = trainer.avatar;
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">

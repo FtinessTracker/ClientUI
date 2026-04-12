@@ -49,169 +49,6 @@ interface SessionEvent {
 // Default avatar as inline SVG data URI (renders a clean person silhouette)
 const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23cbd5e1'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ccircle cx='50' cy='36' r='18'/%3E%3Cellipse cx='50' cy='90' rx='30' ry='24'/%3E%3C/svg%3E";
 
-const BIO_SARAH = 'Sarah is a certified yoga master with over 10 years of experience in Hatha and Yin Yoga. She focuses on breath-work and mindfulness to help clients achieve a balanced state of mind and body.';
-const BIO_MARCUS = 'Marcus is a high-performance strengthening coach who specializes in HIIT and athletic conditioning. His high-energy sessions are designed to push your limits and build functional strength.';
-const BIO_ELENA = 'Elena is a doctor of physical therapy and a mobility specialist. She helps clients recover from injuries and improve their range of motion through science-based rehabilitation techniques.';
-
-const AVAIL_DEFAULT = ['8:00 AM', '11:00 AM', '2:00 PM', '4:30 PM'];
-const AVAIL_MARCUS = ['10:00 AM', '12:30 PM', '3:00 PM', '7:30 PM'];
-
-const MOCK_SESSIONS: SessionEvent[] = [
-  {
-    id: '1',
-    day: 10,
-    month: 3,
-    year: 2026,
-    time: '7:00 AM',
-    duration: '45 min',
-    trainer: 'Sarah Jenkins',
-    trainerId: 't1',
-    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Yoga & Mindfulness',
-    mode: 'virtual',
-    color: 'emerald',
-    isBooked: true,
-    trainerBio: BIO_SARAH,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-  {
-    id: '101',
-    day: 10,
-    month: 3,
-    year: 2026,
-    time: '9:00 AM',
-    duration: '60 min',
-    trainer: 'Marcus Chen',
-    trainerId: 't2',
-    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'HIIT & Strength',
-    mode: 'virtual',
-    color: 'blue',
-    isBooked: false,
-    trainerBio: BIO_MARCUS,
-    trainerAvailability: AVAIL_MARCUS
-  },
-  {
-    id: '2',
-    day: 13,
-    month: 3,
-    year: 2026,
-    time: '6:30 PM',
-    duration: '60 min',
-    trainer: 'Marcus Chen',
-    trainerId: 't2',
-    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'HIIT & Strength',
-    mode: 'virtual',
-    color: 'blue',
-    isBooked: true,
-    trainerBio: BIO_MARCUS,
-    trainerAvailability: AVAIL_MARCUS
-  },
-  {
-    id: '3',
-    day: 17,
-    month: 3,
-    year: 2026,
-    time: '9:00 AM',
-    duration: '45 min',
-    trainer: 'Elena Rodriguez',
-    trainerId: 't3',
-    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Mobility & Rehab',
-    mode: 'in-person',
-    color: 'amber',
-    isBooked: true,
-    trainerBio: BIO_ELENA,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-  {
-    id: '4',
-    day: 19,
-    month: 3,
-    year: 2026,
-    time: '7:00 AM',
-    duration: '60 min',
-    trainer: 'Sarah Jenkins',
-    trainerId: 't1',
-    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Yoga & Mindfulness',
-    mode: 'virtual',
-    color: 'emerald',
-    isBooked: true,
-    trainerBio: BIO_SARAH,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-  {
-    id: '5',
-    day: 24,
-    month: 3,
-    year: 2026,
-    time: '5:00 PM',
-    duration: '45 min',
-    trainer: 'Marcus Chen',
-    trainerId: 't2',
-    trainerAvatar: 'https://images.pexels.com/photos/1681010/pexels-photo-1681010.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'HIIT & Strength',
-    mode: 'virtual',
-    color: 'blue',
-    isBooked: true,
-    trainerBio: BIO_MARCUS,
-    trainerAvailability: AVAIL_MARCUS
-  },
-  {
-    id: '501',
-    day: 24,
-    month: 3,
-    year: 2026,
-    time: '6:00 PM',
-    duration: '45 min',
-    trainer: 'Sarah Jenkins',
-    trainerId: 't1',
-    trainerAvatar: 'https://images.pexels.com/photos/3822864/pexels-photo-3822864.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Yoga',
-    mode: 'virtual',
-    color: 'emerald',
-    isBooked: true,
-    trainerBio: BIO_SARAH,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-  {
-    id: '502',
-    day: 24,
-    month: 3,
-    year: 2026,
-    time: '7:00 PM',
-    duration: '45 min',
-    trainer: 'Elena Rodriguez',
-    trainerId: 't3',
-    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Rehab',
-    mode: 'in-person',
-    color: 'amber',
-    isBooked: true,
-    trainerBio: BIO_ELENA,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-  {
-    id: '102',
-    day: 24,
-    month: 3,
-    year: 2026,
-    time: '8:30 PM',
-    duration: '45 min',
-    trainer: 'Elena Rodriguez',
-    trainerId: 't3',
-    trainerAvatar: 'https://images.pexels.com/photos/1552242/pexels-photo-1552242.jpeg?auto=compress&cs=tinysrgb&w=100',
-    type: 'Mobility & Rehab',
-    mode: 'virtual',
-    color: 'amber',
-    isBooked: false,
-    trainerBio: BIO_ELENA,
-    trainerAvailability: AVAIL_DEFAULT
-  },
-];
-
 const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border: string }> = {
   emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', border: 'border-emerald-200' },
   blue: { bg: 'bg-blue-50', text: 'text-blue-700', dot: 'bg-blue-500', border: 'border-blue-200' },
@@ -284,16 +121,6 @@ export default function CalendarPage() {
     });
   }
 
-  const sessionsForDay = (date: Date) =>
-    MOCK_SESSIONS.filter(s =>
-      s.day === date.getDate() &&
-      s.month === date.getMonth() &&
-      s.year === date.getFullYear() &&
-      !s.isBooked
-    );
-
-  const selectedSessions = selectedDate ? sessionsForDay(selectedDate) : [];
-
   const apiSessions: SessionEvent[] = apiTrainers.map((t, idx) => {
     const startTimeStr = t.windows && t.windows.length > 0 ? t.windows[0].startTime : '08:00';
     const [h, m] = startTimeStr.split(':');
@@ -321,7 +148,7 @@ export default function CalendarPage() {
     };
   });
 
-  const combinedSessions = [...apiSessions, ...selectedSessions];
+  const combinedSessions = apiSessions;
 
   const clientId = user?.id || 'client_001';
 
@@ -445,7 +272,6 @@ export default function CalendarPage() {
 
                 const isToday = date.toDateString() === today.toDateString();
                 const isSelected = selectedDate?.toDateString() === date.toDateString();
-                const daySessions = sessionsForDay(date);
 
                 return (
                   <button
@@ -479,30 +305,7 @@ export default function CalendarPage() {
                       </span>
                     </div>
 
-                    {daySessions.length > 0 && (
-                      <div className="relative flex -space-x-2.5 justify-center z-10">
-                        {daySessions.slice(0, 2).map((s, idx) => (
-                          <div
-                            key={s.id}
-                            className={cn(
-                              "w-6 h-6 rounded-lg ring-2 overflow-hidden shadow-sm transition-all duration-500",
-                              isSelected ? "ring-slate-800" : "ring-white",
-                              idx === 0 ? "z-[1]" : "z-[2]"
-                            )}
-                          >
-                            <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                        {daySessions.length > 2 && (
-                          <div className={cn(
-                            "w-6 h-6 rounded-lg ring-2 flex items-center justify-center text-[8px] font-black z-[3] shadow-sm transition-all duration-500",
-                            isSelected ? "ring-slate-800 bg-slate-800 text-slate-400" : "ring-white bg-slate-50 text-slate-600"
-                          )}>
-                            +{daySessions.length - 2}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* {daySessions.length > 0 && ( ... )} */}
                   </button>
                 );
               })}
@@ -847,13 +650,12 @@ export default function CalendarPage() {
             <div className="relative z-10">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Your Progress</p>
               <p className="text-white font-black text-4xl tracking-tighter mb-1">
-                {MOCK_SESSIONS.length} <span className="text-xl text-slate-500 ml-1">Sessions</span>
+                {apiUpcomingBookings.length} <span className="text-xl text-slate-500 ml-1">Sessions</span>
               </p>
               <p className="text-slate-400 text-xs font-bold mb-8">scheduled in {MONTHS[viewStartDate.getMonth()]}</p>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Yoga', count: 2, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-                  { label: 'HIIT', count: 2, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+                  { label: 'Trainer Sessions', count: apiUpcomingBookings.length, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
                 ].map(({ label, count, color, bg }) => (
                   <div key={label} className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 transition-all hover:bg-white/10 group">
                     <p className={cn('text-2xl font-black mb-1 transition-transform group-hover:scale-110', color)}>{count}</p>

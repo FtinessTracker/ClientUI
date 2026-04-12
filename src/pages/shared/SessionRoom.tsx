@@ -216,7 +216,11 @@ export default function SessionRoom() {
       room.on('disconnected', () => {
         setRemoteParticipants([]);
         roomRef.current = null;
-        navigate('/calendar');
+        if (appUser?.role === 'trainer') {
+          navigate('/trainer/schedule');
+        } else {
+          navigate('/calendar');
+        }
       });
 
       setPhase('call');
@@ -231,7 +235,11 @@ export default function SessionRoom() {
     roomRef.current?.disconnect();
     localVideoTrack?.stop();
     localAudioTrack?.stop();
-    navigate('/calendar');
+    if (appUser?.role === 'trainer') {
+      navigate('/trainer/schedule');
+    } else {
+      navigate('/calendar');
+    }
   }
 
   function toggleMute() {

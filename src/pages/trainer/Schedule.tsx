@@ -596,7 +596,7 @@ export default function TrainerSchedule() {
                                 state: { 
                                   bookingId: booking.bookingId || booking.id,
                                   meetingId: booking.meetingId,
-                                  trainerId: booking.trainerId || todayBookingsData?.trainerId,
+                                  trainerId: appUser?.id,
                                   clientId: booking.clientId
                                 } 
                               });
@@ -697,7 +697,7 @@ export default function TrainerSchedule() {
                                 state: { 
                                   bookingId: booking.bookingId || booking.id,
                                   meetingId: booking.meetingId,
-                                  trainerId: booking.trainerId || upcomingBookingsData?.trainerId,
+                                  trainerId: appUser?.id,
                                   clientId: booking.clientId
                                 } 
                               });

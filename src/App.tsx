@@ -119,7 +119,7 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 function SessionRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const location = useLocation();
-  
+
   if (!isLoaded) return <LoadingScreen />;
 
   // Support mock trainer login for session entry
@@ -128,7 +128,7 @@ function SessionRoute({ children }: { children: React.ReactNode }) {
   if (!isSignedIn && !isMocked) {
     return <Navigate to="/sign-in" state={{ from: location }} replace />;
   }
-  
+
   return <>{children}</>;
 }
 
@@ -158,6 +158,8 @@ function AppRoutes() {
       <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
       <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
+      <Route path="/trainer" element={<TrainerSignIn />} />
+      <Route path="/trainer/login" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-in" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-up" element={<TrainerSignUp />} />
       <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />
@@ -195,7 +197,7 @@ function NoClerkApp() {
 export default function App() {
   const hasClerk = typeof import.meta.env.VITE_CLERK_PUBLISHABLE_KEY === 'string' &&
     (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_test_') ||
-     import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_live_')) &&
+      import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_live_')) &&
     !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.includes('placeholder');
 
   if (!hasClerk) {

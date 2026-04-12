@@ -182,7 +182,7 @@ export default function ClientDashboard() {
                               bookingId: booking.id,
                               meetingId: booking.meetingId,
                               trainerId: booking.trainerId,
-                              clientId: user?.id || booking.clientId
+                              clientId: user?.id
                             }}
                           >
                             <Play className="w-3 h-3 mr-1.5 fill-current" />
