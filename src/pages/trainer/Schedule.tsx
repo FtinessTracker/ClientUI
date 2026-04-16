@@ -803,67 +803,76 @@ export default function TrainerSchedule() {
         </div>
       </div>
 
-      {/* Floating time-setter bottom sheet — appears when dates are selected, no scroll needed */}
+      {/* Time-setter modal — centered, full calendar always visible */}
       <AnimatePresence>
         {selectedDates.length > 0 && (
           <>
-            {/* Backdrop — subtle, doesn't block calendar interaction */}
+            {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="fixed inset-0 z-40 pointer-events-none"
+              transition={{ duration: 0.18 }}
+              onClick={() => setSelectedDates([])}
+              className="fixed inset-0 z-40 bg-slate-900/30 backdrop-blur-[2px]"
             />
 
+            {/* Modal */}
             <motion.div
-              initial={{ y: '100%', opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: '100%', opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-              className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-4 pointer-events-none"
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
             >
-              <div className="pointer-events-auto w-full max-w-lg bg-white rounded-2xl shadow-2xl shadow-slate-900/20 border border-slate-200 overflow-hidden">
-                {/* Sheet header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-                  <div className="flex items-center gap-2">
-                    <CalendarPlus className="w-4 h-4 text-slate-500" />
-                    <span className="text-sm font-semibold text-slate-900">
-                      Set hours for {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''}
-                    </span>
-                    <div className="flex flex-wrap gap-1 ml-1">
-                      {selectedDates.sort().slice(0, 4).map(d => (
-                        <span key={d} className="inline-flex items-center gap-1 px-2 py-0.5 bg-white text-slate-600 text-[11px] font-medium rounded-md border border-slate-200">
-                          {format(new Date(d + 'T12:00:00'), 'MMM d')}
-                          <button onClick={() => toggleDate(d)} className="text-slate-300 hover:text-red-400 transition-colors">
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        </span>
-                      ))}
-                      {selectedDates.length > 4 && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[11px] font-medium rounded-md">
-                          +{selectedDates.length - 4} more
-                        </span>
-                      )}
-                    </div>
+              <div className="pointer-events-auto w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-slate-900/25 border border-slate-200 overflow-hidden">
+
+                {/* Modal header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                  <div>
+                    <p className="text-base font-bold text-slate-900">Set available hours</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Applies to {selectedDates.length} selected date{selectedDates.length > 1 ? 's' : ''}
+                    </p>
                   </div>
                   <button
                     onClick={() => setSelectedDates([])}
-                    className="w-7 h-7 rounded-lg hover:bg-slate-200 flex items-center justify-center transition-colors shrink-0"
+                    className="w-8 h-8 rounded-xl hover:bg-slate-100 flex items-center justify-center transition-colors"
                   >
-                    <X className="w-3.5 h-3.5 text-slate-400" />
+                    <X className="w-4 h-4 text-slate-400" />
                   </button>
                 </div>
 
-                {/* Sheet body */}
-                <div className="p-4">
-                  {/* Presets */}
-                  <div className="grid grid-cols-4 gap-2 mb-4">
+                {/* Selected date chips */}
+                <div className="px-5 pt-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-2">Selected dates</p>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                    {selectedDates.sort().map(d => (
+                      <span key={d} className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg">
+                        {format(new Date(d + 'T12:00:00'), 'EEE, MMM d')}
+                        <button
+                          onClick={() => toggleDate(d)}
+                          className="text-slate-400 hover:text-red-400 transition-colors ml-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="mx-5 mt-4 border-t border-slate-100" />
+
+                {/* Preset blocks */}
+                <div className="px-5 pt-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-3">Quick presets</p>
+                  <div className="grid grid-cols-4 gap-2">
                     {[
-                      { label: 'Morning', sub: '8AM–12PM', start: '08:00', end: '12:00' },
-                      { label: 'Afternoon', sub: '1PM–5PM', start: '13:00', end: '17:00' },
-                      { label: 'Evening', sub: '5PM–9PM', start: '17:00', end: '21:00' },
-                      { label: 'Full Day', sub: '8AM–9PM', start: '08:00', end: '21:00' },
+                      { label: 'Morning', sub: '8 AM – 12 PM', start: '08:00', end: '12:00', icon: '🌅' },
+                      { label: 'Afternoon', sub: '1 PM – 5 PM', start: '13:00', end: '17:00', icon: '☀️' },
+                      { label: 'Evening', sub: '5 PM – 9 PM', start: '17:00', end: '21:00', icon: '🌆' },
+                      { label: 'Full Day', sub: '8 AM – 9 PM', start: '08:00', end: '21:00', icon: '📅' },
                     ].map(p => {
                       const isActive = newStart === p.start && newEnd === p.end;
                       return (
@@ -871,49 +880,47 @@ export default function TrainerSchedule() {
                           key={p.label}
                           onClick={() => { setNewStart(p.start); setNewEnd(p.end); }}
                           className={cn(
-                            'flex flex-col items-center py-2.5 px-2 rounded-xl border transition-all text-center',
-                            isActive ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                            'flex flex-col items-center py-3 px-2 rounded-xl border transition-all text-center',
+                            isActive
+                              ? 'bg-slate-900 border-slate-900 shadow-sm'
+                              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-95'
                           )}
                         >
-                          <p className={cn('text-xs font-semibold leading-none', isActive ? 'text-white' : 'text-slate-800')}>{p.label}</p>
-                          <p className={cn('text-[10px] mt-1', isActive ? 'text-white/60' : 'text-slate-400')}>{p.sub}</p>
+                          <span className="text-base mb-1">{p.icon}</span>
+                          <p className={cn('text-[11px] font-semibold leading-none', isActive ? 'text-white' : 'text-slate-800')}>{p.label}</p>
+                          <p className={cn('text-[10px] mt-1 leading-tight', isActive ? 'text-white/60' : 'text-slate-400')}>{p.sub}</p>
                         </button>
                       );
                     })}
                   </div>
+                </div>
 
-                  {/* Custom time pickers + add button in one row */}
-                  <div className="flex items-end gap-2">
+                {/* Custom time row */}
+                <div className="px-5 pt-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-3">Custom hours</p>
+                  <div className="flex items-center gap-3">
                     <div className="flex-1">
-                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">From</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1.5">Start time</label>
                       <select
                         value={newStart}
                         onChange={e => setNewStart(e.target.value)}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 font-medium bg-white transition-all appearance-none cursor-pointer"
                       >
                         {TIMES.map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
                       </select>
                     </div>
-                    <div className="pb-2.5 text-slate-300 text-sm font-medium">→</div>
+                    <div className="text-slate-300 text-sm font-medium mt-5">→</div>
                     <div className="flex-1">
-                      <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">To</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1.5">End time</label>
                       <select
                         value={newEnd}
                         onChange={e => setNewEnd(e.target.value)}
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
+                        className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:border-slate-400 font-medium bg-white transition-all appearance-none cursor-pointer"
                       >
                         {TIMES.filter(t => t > newStart).map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
                         <option value="23:59">11:59 PM</option>
                       </select>
                     </div>
-                    <button
-                      onClick={addWindowsForSelectedDates}
-                      disabled={newStart >= newEnd}
-                      className="flex items-center gap-1.5 h-[42px] px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.97] shadow-sm shrink-0 whitespace-nowrap"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add Slots
-                    </button>
                   </div>
 
                   {newStart >= newEnd && (
@@ -922,6 +929,45 @@ export default function TrainerSchedule() {
                       End time must be after start time
                     </p>
                   )}
+                </div>
+
+                {/* Preview banner */}
+                {newStart < newEnd && (
+                  <div className="mx-5 mt-4 px-3.5 py-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span className="text-xs text-slate-500">
+                        <span className="font-semibold text-slate-700">{formatTimeLabel(newStart)} – {formatTimeLabel(newEnd)}</span>
+                        {' '}on {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {(() => {
+                        const [sh, sm] = newStart.split(':').map(Number);
+                        const [eh, em] = newEnd.split(':').map(Number);
+                        const mins = (eh * 60 + em) - (sh * 60 + sm);
+                        return `${Math.floor(mins / 60)}h${mins % 60 ? ` ${mins % 60}m` : ''} window`;
+                      })()}
+                    </span>
+                  </div>
+                )}
+
+                {/* Footer actions */}
+                <div className="flex items-center gap-3 px-5 py-4 mt-2">
+                  <button
+                    onClick={() => setSelectedDates([])}
+                    className="flex-1 h-10 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addWindowsForSelectedDates}
+                    disabled={newStart >= newEnd}
+                    className="flex-[2] h-10 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add {selectedDates.length} Slot{selectedDates.length > 1 ? 's' : ''} · {formatTimeLabel(newStart)} – {formatTimeLabel(newEnd)}
+                  </button>
                 </div>
               </div>
             </motion.div>
