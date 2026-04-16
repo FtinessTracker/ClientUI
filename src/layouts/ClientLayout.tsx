@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Calendar, Dumbbell, Utensils, ClipboardList, User,
-  LogOut, Bell, Menu, X, Settings, ChevronRight, ShoppingBag,
+  LogOut, Bell, Menu, X, Settings, ChevronRight, ShoppingBag, BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClerk, useUser } from '@clerk/clerk-react';
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Nutrition', href: '/nutrition', icon: Utensils },
   { label: 'Plans', href: '/plans', icon: ClipboardList },
   { label: 'Products', href: '/products', icon: ShoppingBag },
+  { label: 'Research', href: '/research', icon: BookOpen },
 ];
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
