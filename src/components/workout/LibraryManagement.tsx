@@ -14,9 +14,11 @@ import {
   Grid3x3,
   List,
   MoreVertical,
+  Calendar,
 } from 'lucide-react';
 import { libraryService, WorkoutLibrary } from '../../services/libraryService';
 import { fileService, VideoFile } from '../../services/fileService';
+import { formatDate, formatPrice } from '../../lib/utils';
 import { LibraryCreationForm } from './LibraryCreationForm';
 import { VideoSelector } from './VideoSelector';
 import { WorkoutPlanDetail } from './WorkoutPlanDetail';
@@ -134,7 +136,7 @@ function CardMenu({
   );
 }
 
-export function LibraryManagement({ trainerId, trainerName }: { trainerId: string; trainerName: string }) {
+export function LibraryManagement({ trainerId, trainerName, videos: initialVideos }: { trainerId: string; trainerName: string; videos?: VideoFile[] }) {
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('grid');
   const [libraries, setLibraries] = useState<WorkoutLibrary[]>([]);
@@ -151,10 +153,20 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
   // Fetch libraries and videos on mount
   useEffect(() => {
     fetchLibraries();
-    fetchVideosFromAPI();
-  }, []);
+    // Only fetch videos if not provided as prop
+    if (!initialVideos) {
+      fetchVideosFromAPI();
+    }
+  }, [statusFilter]); // Re-fetch when status filter changes
 
-  // Filter libraries when search or status filter changes
+  // Update allVideos when initialVideos prop changes
+  useEffect(() => {
+    if (initialVideos) {
+      setAllVideos(initialVideos);
+    }
+  }, [initialVideos]);
+
+  // Filter libraries by search only (status filtering is now handled by API)
   useEffect(() => {
     let filtered = libraries;
 
@@ -165,17 +177,16 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
       );
     }
 
-    if (statusFilter) {
-      filtered = filtered.filter((lib) => lib.status === statusFilter);
-    }
-
     setFilteredLibraries(filtered);
-  }, [libraries, searchQuery, statusFilter]);
+  }, [libraries, searchQuery]);
 
   const fetchLibraries = async () => {
     setLoading(true);
     try {
-      const data = await libraryService.getLibraries(trainerId);
+      // Fetch libraries from API
+      // If status filter is set, pass it to API (DRAFT, PUBLISHED, ARCHIVED)
+      // If not set, API returns all non-archived by default
+      const data = await libraryService.getLibraries(trainerId, statusFilter || undefined);
       setLibraries(data);
       setError('');
     } catch (err) {
@@ -281,22 +292,6 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
         animate={{ opacity: 1 }}
         className="w-full space-y-8"
       >
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">Workout Library</h2>
-            <p className="mt-1 text-sm text-gray-600">
-              Create and manage your workout libraries
-            </p>
-          </div>
-          <button
-            onClick={() => setViewMode('creation')}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5" />
-            New Library
-          </button>
-        </div>
 
         {/* Error Alert */}
         <AnimatePresence>
@@ -335,38 +330,35 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
         </AnimatePresence>
 
         {/* Section 1: Your Created Libraries */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-gray-900">Your Created Libraries</h3>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Search libraries..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              >
-                <option value="">All Status</option>
-                <option value="DRAFT">Draft</option>
-                <option value="PUBLISHED">Published</option>
-                <option value="ARCHIVED">Archived</option>
-              </select>
-              <button
-                onClick={() => setDisplayMode(displayMode === 'grid' ? 'list' : 'grid')}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-gray-600 hover:bg-gray-50"
-              >
-                {displayMode === 'grid' ? (
-                  <List className="h-5 w-5" />
-                ) : (
-                  <Grid3x3 className="h-5 w-5" />
-                )}
-              </button>
-            </div>
+        <div className="space-y-0">
+          <div className="flex items-center justify-end gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Search libraries..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">All Status</option>
+              <option value="DRAFT">Draft</option>
+              <option value="PUBLISHED">Published</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+            <button
+              onClick={() => setDisplayMode(displayMode === 'grid' ? 'list' : 'grid')}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-gray-600 hover:bg-gray-50"
+            >
+              {displayMode === 'grid' ? (
+                <List className="h-5 w-5" />
+              ) : (
+                <Grid3x3 className="h-5 w-5" />
+              )}
+            </button>
           </div>
 
           {/* Libraries Grid/List */}
@@ -388,6 +380,19 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
           ) : (
             <div className={displayMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
               <AnimatePresence>
+                {/* Add New Library Placeholder Card */}
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  onClick={() => setViewMode('creation')}
+                  className={`group rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 overflow-hidden cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition flex flex-col items-center justify-center ${displayMode === 'grid' ? 'aspect-auto h-64' : 'h-24'}`}
+                >
+                  <Plus className="h-12 w-12 text-gray-400 group-hover:text-blue-500 transition" />
+                  <p className="mt-2 font-medium text-gray-600 group-hover:text-blue-600">Add</p>
+                </motion.div>
+
                 {filteredLibraries.map((library) => (
                   <motion.div
                     key={library.id}
@@ -470,8 +475,22 @@ export function LibraryManagement({ trainerId, trainerName }: { trainerId: strin
                           <Clock className="h-4 w-4" />
                           {Math.round(library.totalDurationSeconds / 60)} min
                         </span>
-                        {library.priceInCents > 0 && (
-                          <span>${(library.priceInCents / 100).toFixed(2)}</span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {formatDate(library.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Price Badge */}
+                      <div>
+                        {library.priceInCents > 0 ? (
+                          <span className="inline-block rounded-lg bg-blue-100 text-blue-800 px-3 py-1 text-sm font-semibold">
+                            {formatPrice(library.priceInCents)}
+                          </span>
+                        ) : (
+                          <span className="inline-block rounded-lg bg-emerald-100 text-emerald-800 px-3 py-1 text-sm font-semibold">
+                            FREE
+                          </span>
                         )}
                       </div>
 

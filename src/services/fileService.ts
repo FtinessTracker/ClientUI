@@ -11,6 +11,7 @@ export interface FileMetadata {
   resolution?: string;
   durationInSeconds?: number;
   visibility?: 'PUBLIC' | 'PRIVATE';
+  category?: string;
 }
 
 export interface UploadUrlResponse {

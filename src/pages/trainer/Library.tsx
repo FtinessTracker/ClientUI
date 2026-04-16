@@ -29,7 +29,7 @@ export default function LibraryPage() {
       return fileService.getUserUploads(user.id, 'COMPLETED');
     },
     enabled: !!user?.id,
-    refetchInterval: 30000, // Refetch every 30 seconds for pending uploads
+    // Only refetch manually after upload completes, not automatically
   });
 
   /**
@@ -57,6 +57,7 @@ export default function LibraryPage() {
           resolution: metadata.resolution,
           durationInSeconds: metadata.durationInSeconds,
           visibility: metadata.visibility,
+          category: metadata.category,
         });
 
         const fileId = uploadResponse.fileId;
@@ -243,6 +244,7 @@ export default function LibraryPage() {
             <LibraryManagement
               trainerId={user.id}
               trainerName={user.name || 'Trainer'}
+              videos={videos}
             />
           )}
         </motion.div>

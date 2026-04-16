@@ -82,10 +82,10 @@ export default function VideoUploadModal({
         return;
       }
 
-      // Validate file size (100MB limit)
-      const maxSize = 100 * 1024 * 1024;
+      // Validate file size (500MB limit)
+      const maxSize = 500 * 1024 * 1024;
       if (file.size > maxSize) {
-        setError('File size must be less than 100MB');
+        setError('File size must be less than 500MB');
         return;
       }
 
@@ -286,7 +286,7 @@ export default function VideoUploadModal({
                             {isDragging ? 'Drop your video here' : 'Drop your video here'}
                           </p>
                           <p className="text-sm text-slate-400 font-medium mt-1">
-                            or click to browse (Max 100MB)
+                            or click to browse (Max 500MB)
                           </p>
                         </div>
                       </div>

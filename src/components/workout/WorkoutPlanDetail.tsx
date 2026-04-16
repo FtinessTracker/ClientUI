@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Edit,
@@ -14,10 +14,12 @@ import {
   Star,
   TrendingUp,
   Loader,
+  Calendar,
 } from 'lucide-react';
-import { WorkoutLibrary } from '../../services/libraryService';
-import { fileService, VideoInfo } from '../../services/fileService';
-import { VideoMetadataModal } from './VideoMetadataModal';
+import { WorkoutLibrary, libraryService } from '../../services/libraryService';
+import { fileService, VideoInfo, VideoFile } from '../../services/fileService';
+import { formatDate, formatPrice } from '../../lib/utils';
+import { VideoSelector } from './VideoSelector';
 
 interface WorkoutPlanDetailProps {
   library: WorkoutLibrary;
@@ -43,18 +45,27 @@ export function WorkoutPlanDetail({
   const [videoDetails, setVideoDetails] = useState<Map<string, VideoInfo>>(new Map());
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
-  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [currentLibrary, setCurrentLibrary] = useState<WorkoutLibrary>(library);
+  const [showAddVideos, setShowAddVideos] = useState(false);
+  const [availableVideos, setAvailableVideos] = useState<VideoInfo[]>([]);
+  const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
+  const [addingVideos, setAddingVideos] = useState(false);
+
+  // Sync currentLibrary when prop changes
+  useEffect(() => {
+    setCurrentLibrary(library);
+  }, [library]);
 
   // Fetch video details for all videoIds
   useEffect(() => {
     const fetchVideos = async () => {
-      if (!library.videoIds || library.videoIds.length === 0) return;
+      if (!currentLibrary.videoIds || currentLibrary.videoIds.length === 0) return;
 
       setLoadingVideos(true);
       const videoMap = new Map<string, VideoInfo>();
 
       try {
-        const videoPromises = library.videoIds.map(videoId =>
+        const videoPromises = currentLibrary.videoIds.map(videoId =>
           fileService.getVideoById(videoId)
             .then(video => {
               videoMap.set(videoId, video);
@@ -74,29 +85,24 @@ export function WorkoutPlanDetail({
     };
 
     fetchVideos();
-  }, [library.videoIds]);
+  }, [currentLibrary.videoIds]);
 
-  // Handle delete video
+  // Handle delete video from this specific plan
   const handleDeleteVideo = async (videoId: string) => {
-    if (!window.confirm('Are you sure you want to delete this video? This action cannot be undone.')) {
+    if (!window.confirm('Are you sure you want to remove this video from the plan? The video will remain in your library.')) {
       return;
     }
 
     setDeletingVideoId(videoId);
     try {
-      await fileService.deleteVideo(trainerId, videoId);
-      // Remove video from the library state
-      const updatedLibrary = {
-        ...library,
-        videoIds: library.videoIds.filter(id => id !== videoId),
-        totalVideos: library.totalVideos - 1,
-      };
-      onArchive(updatedLibrary); // Using onArchive to update state as a workaround
-      // In a real app, you might want a separate callback or refetch the library
-      alert('Video deleted successfully');
+      // Call the endpoint to remove video from this specific library
+      const updatedLibrary = await libraryService.removeVideos(trainerId, currentLibrary.id, [videoId]);
+      // Update local state only, don't trigger onArchive
+      setCurrentLibrary(updatedLibrary);
+      alert('Video removed from plan successfully');
     } catch (err) {
-      console.error('Failed to delete video:', err);
-      alert('Failed to delete video. Please try again.');
+      console.error('Failed to remove video from plan:', err);
+      alert('Failed to remove video. Please try again.');
     } finally {
       setDeletingVideoId(null);
     }
@@ -108,8 +114,22 @@ export function WorkoutPlanDetail({
     const newMap = new Map(videoDetails);
     newMap.set(updatedVideo.id, updatedVideo);
     setVideoDetails(newMap);
-    setEditingVideoId(null);
     alert('Video metadata updated successfully');
+  };
+
+  // Fetch available videos for adding to library
+  const handleShowAddVideos = async () => {
+    try {
+      const allVideos = await fileService.getUserUploads(trainerId);
+      // Filter out videos already in the library
+      const available = allVideos.filter(v => !currentLibrary.videoIds.includes(v.id));
+      setAvailableVideos(available);
+      setShowAddVideos(true);
+      setSelectedVideoIds([]);
+    } catch (err) {
+      console.error('Failed to fetch available videos:', err);
+      alert('Failed to load available videos. Please try again.');
+    }
   };
 
   return (
@@ -129,9 +149,13 @@ export function WorkoutPlanDetail({
             <X className="h-5 w-5" />
             Back to Libraries
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{library.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{currentLibrary.name}</h1>
           <p className="mt-2 text-sm text-gray-600">
-            {library.category} • {library.difficulty}
+            {currentLibrary.category} • {currentLibrary.difficulty}
+          </p>
+          <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+            <Calendar className="h-4 w-4" />
+            Created {formatDate(currentLibrary.createdAt)}
           </p>
         </div>
 
@@ -139,14 +163,14 @@ export function WorkoutPlanDetail({
         <div className="flex items-center gap-3">
           <span
             className={`px-3 py-1 rounded-full text-xs font-semibold ${
-              library.status === 'PUBLISHED'
+              currentLibrary.status === 'PUBLISHED'
                 ? 'bg-green-100 text-green-800'
-                : library.status === 'DRAFT'
+                : currentLibrary.status === 'DRAFT'
                   ? 'bg-yellow-100 text-yellow-800'
                   : 'bg-gray-100 text-gray-800'
             }`}
           >
-            {library.status}
+            {currentLibrary.status}
           </span>
 
           {/* Three Dot Menu */}
@@ -158,7 +182,7 @@ export function WorkoutPlanDetail({
             <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition z-50">
               <button
                 onClick={() => {
-                  onEdit(library);
+                  onEdit(currentLibrary);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100"
               >
@@ -166,10 +190,10 @@ export function WorkoutPlanDetail({
                 Edit Plan
               </button>
 
-              {library.status === 'DRAFT' && library.totalVideos > 0 && (
+              {currentLibrary.status === 'DRAFT' && currentLibrary.totalVideos > 0 && (
                 <button
                   onClick={() => {
-                    onPublish(library);
+                    onPublish(currentLibrary);
                   }}
                   disabled={isLoading}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-green-700 hover:bg-green-50 border-b border-gray-100 disabled:opacity-50"
@@ -179,10 +203,10 @@ export function WorkoutPlanDetail({
                 </button>
               )}
 
-              {library.status === 'PUBLISHED' && (
+              {currentLibrary.status === 'PUBLISHED' && (
                 <button
                   onClick={() => {
-                    onArchive(library);
+                    onArchive(currentLibrary);
                   }}
                   disabled={isLoading}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b border-gray-100 disabled:opacity-50"
@@ -194,7 +218,7 @@ export function WorkoutPlanDetail({
 
               <button
                 onClick={() => {
-                  onDelete(library);
+                  onDelete(currentLibrary);
                 }}
                 disabled={isLoading}
                 className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
@@ -209,10 +233,10 @@ export function WorkoutPlanDetail({
 
       {/* Thumbnail */}
       <div className="relative h-80 w-full bg-gray-200 rounded-2xl overflow-hidden">
-        {library.thumbnailUrl ? (
+        {currentLibrary.thumbnailUrl ? (
           <img
-            src={library.thumbnailUrl}
-            alt={library.name}
+            src={currentLibrary.thumbnailUrl}
+            alt={currentLibrary.name}
             className="h-full w-full object-cover"
           />
         ) : (
@@ -230,17 +254,25 @@ export function WorkoutPlanDetail({
           <div>
             <h2 className="text-xl font-bold text-gray-900 mb-3">Description</h2>
             <p className="text-gray-600 leading-relaxed">
-              {library.description || 'No description provided'}
+              {currentLibrary.description || 'No description provided'}
             </p>
           </div>
 
           {/* Videos List */}
-          {library.videoIds && library.videoIds.length > 0 && (
+          {currentLibrary.videoIds && currentLibrary.videoIds.length > 0 && (
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Play className="h-5 w-5" />
-                Workout Videos ({library.totalVideos})
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                  <Play className="h-5 w-5" />
+                  Workout Videos ({currentLibrary.totalVideos})
+                </h2>
+                <button
+                  onClick={handleShowAddVideos}
+                  className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  + Add Videos
+                </button>
+              </div>
               
               {loadingVideos && (
                 <div className="flex items-center justify-center py-8">
@@ -250,7 +282,7 @@ export function WorkoutPlanDetail({
               )}
 
               <div className="space-y-4">
-                {library.videoIds.map((videoId, idx) => {
+                {currentLibrary.videoIds.map((videoId, idx) => {
                   const videoInfo = videoDetails.get(videoId);
                   const duration = videoInfo?.durationInSeconds
                     ? fileService.formatDuration(videoInfo.durationInSeconds)
@@ -261,16 +293,27 @@ export function WorkoutPlanDetail({
                       key={videoId}
                       className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition flex gap-4 bg-white"
                     >
-                      {/* Thumbnail */}
-                      <div className="relative w-28 h-28 rounded-lg bg-gradient-to-br from-gray-300 to-gray-400 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                        {videoInfo?.thumbnailUrl ? (
-                          <img
-                            src={videoInfo.thumbnailUrl}
-                            alt={videoInfo.name}
-                            className="w-full h-full object-cover"
-                          />
+                      {/* Video Screen with Play Button */}
+                      <div className="relative w-28 h-28 rounded-lg bg-black flex-shrink-0 overflow-hidden group cursor-pointer">
+                        {videoInfo?.url ? (
+                          <>
+                            <video
+                              poster={videoInfo?.thumbnailUrl}
+                              className="w-full h-full object-cover"
+                            >
+                              <source src={videoInfo.url} type="video/mp4" />
+                            </video>
+                            {/* Play Button Overlay */}
+                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition flex items-center justify-center">
+                              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition shadow-lg">
+                                <Play className="h-6 w-6 text-blue-600 ml-0.5" />
+                              </div>
+                            </div>
+                          </>
                         ) : (
-                          <Play className="h-8 w-8 text-white opacity-70" />
+                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
+                            <Play className="h-8 w-8 text-white opacity-70" />
+                          </div>
                         )}
                         {/* Duration Badge */}
                         {videoInfo?.durationInSeconds && (
@@ -321,7 +364,7 @@ export function WorkoutPlanDetail({
                             onClick={() => handleDeleteVideo(videoId)}
                             disabled={deletingVideoId === videoId || (videoInfo && !videoInfo.active)}
                             className="flex-shrink-0 p-2 hover:bg-red-50 rounded-lg transition text-red-600 hover:text-red-700 disabled:opacity-50 disabled:hover:bg-transparent"
-                            title={videoInfo && !videoInfo.active ? 'Cannot edit/delete inactive videos' : 'Delete video'}
+                            title={videoInfo && !videoInfo.active ? 'Cannot delete inactive videos' : 'Remove video from plan'}
                           >
                             {deletingVideoId === videoId ? (
                               <Loader className="h-5 w-5 animate-spin" />
@@ -329,29 +372,8 @@ export function WorkoutPlanDetail({
                               <Trash2 className="h-5 w-5" />
                             )}
                           </button>
-
-                          {/* Edit Button */}
-                          <button
-                            onClick={() => setEditingVideoId(videoId)}
-                            disabled={videoInfo && !videoInfo.active}
-                            className="flex-shrink-0 p-2 hover:bg-blue-50 rounded-lg transition text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:hover:bg-transparent"
-                            title={videoInfo && !videoInfo.active ? 'Cannot edit/delete inactive videos' : 'Edit video metadata'}
-                          >
-                            <Edit className="h-5 w-5" />
-                          </button>
                         </div>
                       </div>
-
-                      {/* Edit Modal */}
-                      {editingVideoId === videoId && videoInfo && (
-                        <VideoMetadataModal
-                          isOpen={true}
-                          video={videoInfo}
-                          trainerId={trainerId}
-                          onClose={() => setEditingVideoId(null)}
-                          onSuccess={handleUpdateVideoMetadata}
-                        />
-                      )}
                     </div>
                   );
                 })}
@@ -359,15 +381,60 @@ export function WorkoutPlanDetail({
             </div>
           )}
 
+          {/* No Videos Section */}
+          {(!currentLibrary.videoIds || currentLibrary.videoIds.length === 0) && (
+            <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+              <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Videos Added Yet</h3>
+              <p className="text-gray-600 mb-6">Start building your workout library by adding videos</p>
+              <button
+                onClick={handleShowAddVideos}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
+                + Add Your First Video
+              </button>
+            </div>
+          )}
+
+          {/* Add Videos Modal - Using VideoSelector */}
+          <AnimatePresence>
+            {showAddVideos && (
+              <VideoSelector
+                videos={availableVideos as VideoFile[]}
+                onSelect={async (videoIds) => {
+                  setAddingVideos(true);
+                  try {
+                    await libraryService.addVideos(trainerId, currentLibrary.id, videoIds);
+                    const updated = await libraryService.getLibrary(trainerId, currentLibrary.id);
+                    setCurrentLibrary(updated);
+                    setShowAddVideos(false);
+                    setSelectedVideoIds([]);
+                  } catch (error) {
+                    console.error('Failed to add videos:', error);
+                  } finally {
+                    setAddingVideos(false);
+                  }
+                }}
+                onCancel={() => {
+                  setShowAddVideos(false);
+                  setSelectedVideoIds([]);
+                }}
+                loading={addingVideos}
+                selectedVideoIds={selectedVideoIds}
+                existingVideoIds={currentLibrary.videoIds || []}
+              />
+            )}
+          </AnimatePresence>
+
           {/* Agenda */}
-          {library.agenda && library.agenda.length > 0 && (
+          {currentLibrary.agenda && currentLibrary.agenda.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
                 Agenda
               </h2>
               <div className="space-y-3">
-                {library.agenda.map((item, idx) => (
+                {currentLibrary.agenda.map((item, idx) => (
                   <div key={idx} className="rounded-lg border border-gray-200 p-4 bg-gray-50">
                     <p className="font-semibold text-gray-900">
                       {item.order}. {item.title}
@@ -382,11 +449,11 @@ export function WorkoutPlanDetail({
           )}
 
           {/* Guidelines */}
-          {library.guidelines && library.guidelines.length > 0 && (
+          {currentLibrary.guidelines && currentLibrary.guidelines.length > 0 && (
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-3">Guidelines</h2>
               <ul className="space-y-2">
-                {library.guidelines.map((guideline, idx) => (
+                {currentLibrary.guidelines.map((guideline, idx) => (
                   <li
                     key={idx}
                     className="flex gap-3 text-sm text-gray-600 p-3 rounded bg-blue-50"
@@ -404,7 +471,7 @@ export function WorkoutPlanDetail({
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-3">Prerequisites</h2>
               <ul className="space-y-2">
-                {library.prerequisites.map((prerequisite, idx) => (
+                {currentLibrary.prerequisites.map((prerequisite, idx) => (
                   <li
                     key={idx}
                     className="flex gap-3 text-sm text-gray-600 p-3 rounded bg-purple-50"
@@ -418,14 +485,14 @@ export function WorkoutPlanDetail({
           )}
 
           {/* Warnings */}
-          {library.warnings && library.warnings.length > 0 && (
+          {currentLibrary.warnings && currentLibrary.warnings.length > 0 && (
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <AlertCircle className="h-5 w-5" />
                 Warnings & Disclaimers
               </h2>
               <div className="space-y-2">
-                {library.warnings.map((warning, idx) => (
+                {currentLibrary.warnings.map((warning, idx) => (
                   <div
                     key={idx}
                     className="flex gap-3 text-sm text-gray-700 p-3 rounded bg-yellow-50 border border-yellow-200"
@@ -448,7 +515,7 @@ export function WorkoutPlanDetail({
             <div className="rounded-lg bg-blue-50 p-4 border border-blue-200">
               <div className="flex items-center gap-2 mb-2">
                 <Play className="h-5 w-5 text-blue-600" />
-                <p className="font-semibold text-gray-900">{library.totalVideos} Videos</p>
+                <p className="font-semibold text-gray-900">{currentLibrary.totalVideos} Videos</p>
               </div>
               <p className="text-xs text-gray-600">Total content</p>
             </div>
@@ -457,18 +524,16 @@ export function WorkoutPlanDetail({
               <div className="flex items-center gap-2 mb-2">
                 <Clock className="h-5 w-5 text-purple-600" />
                 <p className="font-semibold text-gray-900">
-                  {Math.round(library.totalDurationSeconds / 60)} Min
+                  {Math.round(currentLibrary.totalDurationSeconds / 60)} Min
                 </p>
               </div>
               <p className="text-xs text-gray-600">Total duration</p>
             </div>
 
-            <div className="rounded-lg bg-green-50 p-4 border border-green-200">
+            <div className={`rounded-lg p-4 border ${currentLibrary.priceInCents > 0 ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'}`}>
               <p className="text-xs text-gray-600 mb-1">Price</p>
-              <p className="font-bold text-gray-900 text-lg">
-                {library.priceInCents > 0
-                  ? `$${(library.priceInCents / 100).toFixed(2)}`
-                  : 'Free'}
+              <p className={`font-bold text-lg ${currentLibrary.priceInCents > 0 ? 'text-blue-900' : 'text-emerald-900'}`}>
+                {formatPrice(currentLibrary.priceInCents)}
               </p>
             </div>
           </div>
@@ -507,7 +572,7 @@ export function WorkoutPlanDetail({
 
           {/* Action Button */}
           <button
-            onClick={() => onEdit(library)}
+            onClick={() => onEdit(currentLibrary)}
             className="w-full flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition"
           >
             <Edit className="h-4 w-4" />

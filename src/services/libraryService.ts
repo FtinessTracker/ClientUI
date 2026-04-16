@@ -172,9 +172,9 @@ export const libraryService = {
     videoIds: string[]
   ): Promise<WorkoutLibrary> => {
     const response = await fetch(
-      `${API_BASE}/api/library/${trainerId}/${libraryId}/videos`,
+      `${API_BASE}/api/library/${trainerId}/${libraryId}/remove-videos`,
       {
-        method: 'DELETE',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ videoIds }),
       }

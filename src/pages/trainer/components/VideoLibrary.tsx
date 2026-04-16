@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play, Trash2, Lock, Eye, X, AlertCircle, CheckCircle, Edit2, Grid3x3, List, Clock, Maximize2, Database
@@ -6,7 +6,7 @@ import {
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Card, CardContent } from '../../../components/ui/Card';
-import { cn } from '../../../lib/utils';
+import { cn, formatDate } from '../../../lib/utils';
 import { fileService, VideoFile } from '../../../services/fileService';
 
 interface VideoLibraryProps {
@@ -28,10 +28,13 @@ export default function VideoLibrary({
 }: VideoLibraryProps) {
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [editingVideo, setEditingVideo] = useState<VideoFile | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', visibility: 'PRIVATE' as const });
+  const [editForm, setEditForm] = useState({ name: '', visibility: 'PRIVATE' as const, category: 'GENERAL' });
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
+  const [groupByCategory, setGroupByCategory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleDelete = async (videoId: string) => {
     if (window.confirm('Are you sure you want to delete this video?')) {
@@ -48,6 +51,7 @@ export default function VideoLibrary({
     setEditForm({
       name: video.name,
       visibility: video.visibility as 'PUBLIC' | 'PRIVATE',
+      category: video.category || 'GENERAL',
     });
     setUpdateMessage(null);
   };
@@ -60,6 +64,7 @@ export default function VideoLibrary({
       await fileService.updateVideoMetadata(userId, editingVideo.id, {
         name: editForm.name,
         visibility: editForm.visibility,
+        category: editForm.category as any,
       });
 
       setUpdateMessage({ type: 'success', text: 'Video updated successfully!' });
@@ -76,6 +81,39 @@ export default function VideoLibrary({
     }
   };
 
+  // Sort and group videos
+  const processedVideos = useMemo(() => {
+    let filtered = [...videos];
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((video) => video.name.toLowerCase().includes(query));
+    }
+
+    let sorted = filtered;
+
+    // Sort
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+
+    // Group by category if enabled
+    if (groupByCategory) {
+      const grouped: { [key: string]: VideoFile[] } = {};
+      sorted.forEach((video) => {
+        const cat = video.category || 'GENERAL';
+        if (!grouped[cat]) grouped[cat] = [];
+        grouped[cat].push(video);
+      });
+      return grouped;
+    }
+
+    return { all: sorted };
+  }, [videos, sortBy, groupByCategory, searchQuery]);
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -90,45 +128,67 @@ export default function VideoLibrary({
 
   return (
     <div className="space-y-6">
-      {/* View Toggle */}
+      {/* Search and Filters */}
       {videos.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="flex justify-end gap-2 border-l border-slate-200 pl-2"
+          className="space-y-3"
         >
-          <button
-            onClick={() => setViewMode('grid')}
-            className={cn(
-              'p-2 rounded-lg transition-all',
-              viewMode === 'grid'
-                ? 'bg-accent/10 text-accent'
-                : 'text-slate-400 hover:text-slate-600'
-            )}
-            title="Grid view"
-          >
-            <Grid3x3 className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={cn(
-              'p-2 rounded-lg transition-all',
-              viewMode === 'list'
-                ? 'bg-accent/10 text-accent'
-                : 'text-slate-400 hover:text-slate-600'
-            )}
-            title="List view"
-          >
-            <List className="w-5 h-5" />
-          </button>
+          {/* Search Input */}
+          <Input
+            placeholder="Search videos by name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="rounded-lg border-gray-300 px-4 py-2.5 text-sm"
+          />
+
+          {/* Filters and View Toggle */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date')}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="date">Sort by Date (Newest)</option>
+                <option value="name">Sort by Name</option>
+              </select>
+
+              <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={groupByCategory}
+                  onChange={(e) => setGroupByCategory(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">Group by Category</span>
+              </label>
+            </div>
+
+            <button
+              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-gray-600 hover:bg-gray-50"
+            >
+              {viewMode === 'grid' ? (
+                <List className="h-5 w-5" />
+              ) : (
+                <Grid3x3 className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         </motion.div>
       )}
 
       {/* Videos Grid View */}
       {viewMode === 'grid' && videos.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {videos.map((video) => (
+        <div className={groupByCategory ? 'space-y-6' : 'space-y-8'}>
+          {Object.entries(groupByCategory ? processedVideos : { 'All Videos': processedVideos['all'] || [] }).map(([category, categoryVideos]) => (
+            <div key={category}>
+              {groupByCategory && <h3 className="text-base font-bold text-gray-900 mb-3">{category}</h3>}
+              <div className={groupByCategory ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3' : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4'}>
+                {(categoryVideos as VideoFile[]).map((video) => (
             <motion.div
               key={video.id}
               layout
@@ -143,12 +203,14 @@ export default function VideoLibrary({
                   className="relative w-full h-full bg-gradient-to-br from-slate-900 to-slate-800 overflow-hidden flex-1 cursor-pointer"
                   onClick={() => setPlayingVideoId(video.id)}
                 >
-                  {video.thumbnailUrl ? (
-                    <img
-                      src={video.thumbnailUrl}
-                      alt={video.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                  {video.s3Url ? (
+                    <video
+                      poster={video.thumbnailUrl || undefined}
+                      preload="metadata"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 bg-slate-900"
+                    >
+                      <source src={video.s3Url} type="video/mp4" />
+                    </video>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
                       <Play className="w-12 h-12 text-white/30" />
@@ -202,43 +264,82 @@ export default function VideoLibrary({
                 </div>
 
                 {/* Info Section */}
-                <div className="p-3 bg-white space-y-3 text-center">
-                  <h3 className="font-black text-slate-900 line-clamp-2 text-sm">
-                    {video.name}
-                  </h3>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 justify-center">
-                    <button
-                      onClick={() => handleEditClick(video)}
-                      className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1"
-                      title="Edit"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      Edit
-                    </button>
-
-                    {onDelete && (
-                      <button
-                        onClick={() => handleDelete(video.id)}
-                        disabled={isDeleting === video.id}
-                        className="flex-1 px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1"
-                        title="Delete"
-                      >
-                        {isDeleting === video.id ? (
-                          <span className="inline-block w-3 h-3 border-2 border-red-200 border-t-red-600 rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </>
-                        )}
-                      </button>
+                <div className={groupByCategory ? 'p-2 bg-white space-y-2 text-center' : 'p-3 bg-white space-y-3 text-center'}>
+                  <div>
+                    <h3 className={groupByCategory ? 'font-bold text-slate-900 line-clamp-2 text-xs' : 'font-black text-slate-900 line-clamp-2 text-sm'}>
+                      {video.name}
+                    </h3>
+                    {!groupByCategory && (
+                      <p className="text-xs text-gray-600 mt-1">
+                        {video.category || 'GENERAL'} • {formatDate(video.createdAt)}
+                      </p>
                     )}
                   </div>
+
+                  {/* Action Buttons */}
+                  {!groupByCategory && (
+                    <div className="flex gap-2 justify-center">
+                      <button
+                        onClick={() => handleEditClick(video)}
+                        className="flex-1 px-3 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        Edit
+                      </button>
+
+                      {onDelete && (
+                        <button
+                          onClick={() => handleDelete(video.id)}
+                          disabled={isDeleting === video.id}
+                          className="flex-1 px-3 py-2 hover:bg-red-50 text-red-600 rounded-lg font-bold text-xs transition-colors flex items-center justify-center gap-1"
+                          title="Delete"
+                        >
+                          {isDeleting === video.id ? (
+                            <span className="inline-block w-3 h-3 border-2 border-red-200 border-t-red-600 rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              <Trash2 className="w-3.5 h-3.5" />
+                              Delete
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  
+                  {groupByCategory && (
+                    <div className="flex gap-1 justify-center pt-1">
+                      <button
+                        onClick={() => handleEditClick(video)}
+                        className="p-1.5 hover:bg-blue-50 text-blue-600 rounded transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+
+                      {onDelete && (
+                        <button
+                          onClick={() => handleDelete(video.id)}
+                          disabled={isDeleting === video.id}
+                          className="p-1.5 hover:bg-red-50 text-red-600 rounded transition-colors"
+                          title="Delete"
+                        >
+                          {isDeleting === video.id ? (
+                            <span className="inline-block w-3 h-3 border-2 border-red-200 border-t-red-600 rounded-full animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -246,8 +347,12 @@ export default function VideoLibrary({
       {/* Videos List View */}
       {viewMode === 'list' && videos.length > 0 && (
         <AnimatePresence mode="popLayout">
-          <div className="space-y-3">
-            {videos.map((video) => (
+          <div className={groupByCategory ? 'space-y-6' : 'space-y-3'}>
+            {Object.entries(groupByCategory ? processedVideos : { 'All Videos': processedVideos['all'] || [] }).map(([category, categoryVideos]) => (
+              <div key={category}>
+                {groupByCategory && <h3 className="text-lg font-bold text-gray-900 mb-4">{category}</h3>}
+                <div className="space-y-3">
+                  {(categoryVideos as VideoFile[]).map((video) => (
               <motion.div
                 key={video.id}
                 layout
@@ -261,14 +366,16 @@ export default function VideoLibrary({
                   className="w-32 h-24 rounded-xl bg-gradient-to-br from-slate-900 to-slate-800 flex-shrink-0 overflow-hidden relative group cursor-pointer"
                   onClick={() => setPlayingVideoId(video.id)}
                 >
-                  {video.thumbnailUrl ? (
-                    <img
-                      src={video.thumbnailUrl}
-                      alt={video.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    />
+                  {video.s3Url ? (
+                    <video
+                      poster={video.thumbnailUrl || undefined}
+                      preload="metadata"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform bg-slate-900"
+                    >
+                      <source src={video.s3Url} type="video/mp4" />
+                    </video>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
+                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
                       <Play className="w-6 h-6 text-white/30" />
                     </div>
                   )}
@@ -280,7 +387,12 @@ export default function VideoLibrary({
                 {/* Details */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-3 mb-2">
-                    <h3 className="font-black text-slate-900 line-clamp-1">{video.name}</h3>
+                    <div>
+                      <h3 className="font-black text-slate-900 line-clamp-1">{video.name}</h3>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {video.category || 'GENERAL'} • {formatDate(video.createdAt)}
+                      </p>
+                    </div>
                     <span
                       className={cn(
                         'inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold shrink-0 whitespace-nowrap',
@@ -351,9 +463,32 @@ export default function VideoLibrary({
                   )}
                 </div>
               </motion.div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </AnimatePresence>
+      )}
+
+      {/* No Search Results */}
+      {videos.length > 0 && searchQuery && Object.values(processedVideos).every((v: any) => !Array.isArray(v) || v.length === 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-slate-50 border-2 border-dashed border-slate-200">
+            <CardContent className="p-20 text-center">
+              <div className="w-20 h-20 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Play className="w-10 h-10 text-slate-400" />
+              </div>
+              <h3 className="text-xl font-black text-slate-900 mb-2">No videos found</h3>
+              <p className="text-sm text-slate-400 font-medium">
+                No videos match "{searchQuery}"
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       {/* Empty State */}
@@ -537,6 +672,24 @@ export default function VideoLibrary({
                       className="h-10 rounded-xl border-slate-200"
                       placeholder="Enter video name"
                     />
+                  </div>
+
+                  {/* Category Dropdown */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                    >
+                      {['YOGA', 'HIIT', 'STRENGTH', 'CARDIO', 'STRETCHING', 'NUTRITION', 'MEDITATION', 'GENERAL', 'OTHER'].map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Privacy Toggle */}

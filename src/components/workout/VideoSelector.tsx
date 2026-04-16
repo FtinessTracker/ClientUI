@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Plus, X, Check } from 'lucide-react';
+import { Search, Plus, X, Check, Play } from 'lucide-react';
 import { VideoFile } from '../../services/fileService';
 
 interface VideoSelectorProps {
@@ -175,11 +175,33 @@ export function VideoSelector({
                         isSelected ? 'bg-blue-50 hover:bg-blue-100' : 'hover:bg-gray-50'
                       }`}
                     >
+                      {/* Video Preview */}
+                      <div className="relative w-32 h-20 rounded-lg bg-slate-900 flex-shrink-0 overflow-hidden group">
+                        {video.s3Url ? (
+                          <video
+                            poster={video.thumbnailUrl || undefined}
+                            preload="metadata"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          >
+                            <source src={video.s3Url} type="video/mp4" />
+                          </video>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Play className="w-6 h-6 text-white/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
+                            <Play className="w-4 h-4 text-slate-900 ml-0.5" />
+                          </div>
+                        </div>
+                      </div>
+
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => {}}
-                        className="h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600"
+                        className="h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 flex-shrink-0"
                         onClick={(e) => e.stopPropagation()}
                       />
 
@@ -207,7 +229,7 @@ export function VideoSelector({
                         initial={false}
                         animate={isSelected ? { scale: 1 } : { scale: 0 }}
                       >
-                        <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600">
+                        <div className="flex h-6 w-6 items-center justify-center rounded bg-blue-600 flex-shrink-0">
                           <Check className="h-4 w-4 text-white" />
                         </div>
                       </motion.div>
