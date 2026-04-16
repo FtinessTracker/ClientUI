@@ -6,7 +6,7 @@ import {
   Calendar, Clock, Plus, ChevronLeft, ChevronRight,
   CircleCheck as CheckCircle, CircleAlert as AlertCircle, Globe,
   Send, X, CalendarPlus, Loader as Loader2, Play, Zap,
-  TrendingUp, Sparkles, ChevronDown, MousePointerClick, Info,
+  TrendingUp, Sparkles, ChevronDown,
 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -92,11 +92,10 @@ function getAvatarColor(name: string) {
   return colors[name.charCodeAt(0) % colors.length];
 }
 
-function ClientAvatar({ name, avatar, size = 'md' }: { name: string; avatar?: string; size?: 'sm' | 'md' }) {
-  const sz = size === 'sm' ? 'w-8 h-8 text-xs' : 'w-10 h-10 text-sm';
-  if (avatar) return <img src={avatar} alt={name} className={cn(sz, 'rounded-full object-cover ring-2 ring-white')} />;
+function ClientAvatar({ name, avatar }: { name: string; avatar?: string }) {
+  if (avatar) return <img src={avatar} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-white shrink-0" />;
   return (
-    <div className={cn(sz, 'rounded-full flex items-center justify-center font-bold text-white shrink-0 ring-2 ring-white', getAvatarColor(name))}>
+    <div className={cn('w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 ring-2 ring-white', getAvatarColor(name))}>
       {getInitials(name)}
     </div>
   );
@@ -108,8 +107,47 @@ function StatusPill({ status }: { status: string }) {
     pending: 'bg-amber-100 text-amber-700',
     cancelled: 'bg-red-100 text-red-600',
   };
-  const cls = map[status?.toLowerCase()] || 'bg-slate-100 text-slate-500';
-  return <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize', cls)}>{status}</span>;
+  return <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize', map[status?.toLowerCase()] || 'bg-slate-100 text-slate-500')}>{status}</span>;
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex items-center gap-3 px-4 py-3.5 animate-pulse">
+      <div className="w-9 h-9 rounded-full bg-slate-100 shrink-0" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-3.5 bg-slate-100 rounded-full w-32" />
+        <div className="h-3 bg-slate-100 rounded-full w-24" />
+      </div>
+      <div className="h-7 w-14 bg-slate-100 rounded-lg" />
+    </div>
+  );
+}
+
+function SkeletonAvailabilityRow() {
+  return (
+    <div className="rounded-xl border border-slate-100 overflow-hidden animate-pulse">
+      <div className="px-3.5 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <div className="h-3 bg-slate-200 rounded-full w-24" />
+        <div className="h-3 bg-slate-100 rounded-full w-12" />
+      </div>
+      <div className="px-3.5 py-2.5 flex gap-2">
+        <div className="h-7 w-28 bg-slate-100 rounded-lg" />
+        <div className="h-7 w-28 bg-slate-100 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonStat() {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3 animate-pulse">
+      <div className="w-9 h-9 rounded-xl bg-slate-100 shrink-0" />
+      <div className="space-y-1.5">
+        <div className="h-5 w-8 bg-slate-100 rounded" />
+        <div className="h-2.5 w-20 bg-slate-100 rounded-full" />
+      </div>
+    </div>
+  );
 }
 
 function SessionRow({ booking, idx, showDate = false, onJoin }: {
@@ -121,7 +159,7 @@ function SessionRow({ booking, idx, showDate = false, onJoin }: {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.04, duration: 0.25 }}
-      className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50/80 transition-colors group"
+      className="flex items-center gap-3 px-4 py-3.5 hover:bg-slate-50/80 transition-colors"
     >
       <ClientAvatar name={booking.clientName} avatar={booking.clientAvatar} />
       <div className="flex-1 min-w-0">
@@ -154,29 +192,13 @@ function SessionRow({ booking, idx, showDate = false, onJoin }: {
 }
 
 function AccordionSection({
-  icon: Icon,
-  iconBg,
-  iconColor,
-  title,
-  subtitle,
-  badge,
-  badgeBg,
-  defaultOpen = false,
-  children,
-  loading,
-  loadingRows = 2,
+  icon: Icon, iconBg, iconColor, title, subtitle, badge, badgeBg,
+  defaultOpen = false, children, loading, loadingRows = 2, loadingType = 'row',
 }: {
-  icon: React.ElementType;
-  iconBg: string;
-  iconColor: string;
-  title: string;
-  subtitle: string;
-  badge?: string;
-  badgeBg?: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  loading?: boolean;
-  loadingRows?: number;
+  icon: React.ElementType; iconBg: string; iconColor: string;
+  title: string; subtitle: string; badge?: string; badgeBg?: string;
+  defaultOpen?: boolean; children: React.ReactNode;
+  loading?: boolean; loadingRows?: number; loadingType?: 'row' | 'availability';
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -184,7 +206,7 @@ function AccordionSection({
     <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
       <button
         onClick={() => setOpen(p => !p)}
-        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50/60 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-5 py-4 hover:bg-slate-50/50 transition-colors text-left"
       >
         <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', iconBg)}>
           <Icon className={cn('w-4 h-4', iconColor)} />
@@ -214,10 +236,11 @@ function AccordionSection({
           >
             <div className="border-t border-slate-100">
               {loading ? (
-                <div className="p-4 space-y-2">
-                  {Array.from({ length: loadingRows }).map((_, i) => (
-                    <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse" />
-                  ))}
+                <div className="divide-y divide-slate-50">
+                  {loadingType === 'availability'
+                    ? Array.from({ length: loadingRows }).map((_, i) => <div key={i} className="p-3"><SkeletonAvailabilityRow /></div>)
+                    : Array.from({ length: loadingRows }).map((_, i) => <SkeletonRow key={i} />)
+                  }
                 </div>
               ) : children}
             </div>
@@ -244,7 +267,6 @@ export default function TrainerSchedule() {
   const [newEnd, setNewEnd] = useState('12:00');
   const [showSuccess, setShowSuccess] = useState(false);
   const [overlapWarning, setOverlapWarning] = useState<string[]>([]);
-  const [hintDismissed, setHintDismissed] = useState(false);
 
   const fetchStartDate = format(startOfMonth(calendarMonth), 'yyyy-MM-dd');
   const fetchEndDate = format(endOfMonth(calendarMonth), 'yyyy-MM-dd');
@@ -359,7 +381,8 @@ export default function TrainerSchedule() {
   const todayCount = todayBookingsData?.totalBookings || 0;
   const upcomingCount = upcomingBookingsData?.totalBookings || 0;
   const futureSlotCount = groupedExisting.reduce((acc, g) => acc + g.windows.length, 0);
-  const hasNoAvailability = !isLoadingExisting && groupedExisting.length === 0 && stagedWindows.length === 0;
+
+  const statsLoading = isLoadingToday && isLoadingUpcoming && isLoadingExisting;
 
   return (
     <div className="space-y-6 pb-10">
@@ -399,7 +422,7 @@ export default function TrainerSchedule() {
           <motion.div key="success" initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
             className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl text-sm font-medium">
             <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-            Availability published successfully. Clients can now book your open slots.
+            Availability published. Clients can now book your open slots.
           </motion.div>
         )}
         {submitMutation.isError && (
@@ -424,120 +447,99 @@ export default function TrainerSchedule() {
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Today's Sessions", value: todayCount, icon: Zap, iconColor: 'text-emerald-600', bg: 'bg-emerald-50', loading: isLoadingToday },
-          { label: 'Upcoming Bookings', value: upcomingCount, icon: TrendingUp, iconColor: 'text-blue-600', bg: 'bg-blue-50', loading: isLoadingUpcoming },
-          { label: 'Available Slots', value: futureSlotCount, icon: Sparkles, iconColor: 'text-amber-600', bg: 'bg-amber-50', loading: isLoadingExisting },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06, duration: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3"
-          >
-            <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', stat.bg)}>
-              <stat.icon className={cn('w-4 h-4', stat.iconColor)} />
-            </div>
-            <div>
-              {stat.loading ? <div className="w-7 h-5 bg-slate-100 rounded animate-pulse mb-1" /> : (
+        {statsLoading ? (
+          <>
+            <SkeletonStat />
+            <SkeletonStat />
+            <SkeletonStat />
+          </>
+        ) : (
+          [
+            { label: "Today's Sessions", value: todayCount, icon: Zap, iconColor: 'text-emerald-600', bg: 'bg-emerald-50' },
+            { label: 'Upcoming Bookings', value: upcomingCount, icon: TrendingUp, iconColor: 'text-blue-600', bg: 'bg-blue-50' },
+            { label: 'Available Slots', value: futureSlotCount, icon: Sparkles, iconColor: 'text-amber-600', bg: 'bg-amber-50' },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.06, duration: 0.3 }}
+              className="bg-white rounded-2xl border border-slate-100 p-4 flex items-center gap-3"
+            >
+              <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center shrink-0', stat.bg)}>
+                <stat.icon className={cn('w-4 h-4', stat.iconColor)} />
+              </div>
+              <div>
                 <p className="text-xl font-bold text-slate-900 leading-none">{stat.value}</p>
-              )}
-              <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{stat.label}</p>
-            </div>
-          </motion.div>
-        ))}
+                <p className="text-[11px] text-slate-400 mt-0.5 font-medium">{stat.label}</p>
+              </div>
+            </motion.div>
+          ))
+        )}
       </div>
 
       {/* Main grid */}
       <div className="grid lg:grid-cols-12 gap-6">
 
-        {/* Calendar */}
+        {/* Calendar + availability setter */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.35 }}
           className="lg:col-span-5 flex flex-col gap-4"
         >
-          {/* How it works hint */}
-          <AnimatePresence>
-            {!hintDismissed && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.2 }}
-                className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="w-7 h-7 bg-blue-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                      <Info className="w-3.5 h-3.5 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-blue-900 mb-1">How to set your availability</p>
-                      <ol className="space-y-1">
-                        {[
-                          { icon: MousePointerClick, text: 'Click one or more dates on the calendar below' },
-                          { icon: Clock, text: 'Set your available time window for those dates' },
-                          { icon: Send, text: 'Publish — clients can then book your open slots' },
-                        ].map((step, i) => (
-                          <li key={i} className="flex items-center gap-2 text-xs text-blue-700">
-                            <span className="w-4 h-4 bg-blue-200 rounded-full flex items-center justify-center text-[10px] font-bold text-blue-700 shrink-0">{i + 1}</span>
-                            <step.icon className="w-3 h-3 text-blue-500 shrink-0" />
-                            {step.text}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  </div>
-                  <button onClick={() => setHintDismissed(true)} className="text-blue-300 hover:text-blue-500 transition-colors shrink-0 mt-0.5">
-                    <X className="w-4 h-4" />
+          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
+
+            {/* Calendar header with step indicator */}
+            <div className="px-5 pt-5 pb-4 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-0.5">Set Availability</p>
+                  <p className="font-bold text-slate-900 text-base tracking-tight">{format(calendarMonth, 'MMMM yyyy')}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all text-slate-400 hover:text-slate-700">
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setCalendarMonth(new Date())}
+                    className="px-2.5 py-1 text-[10px] font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all">
+                    Today
+                  </button>
+                  <button onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all text-slate-400 hover:text-slate-700">
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* No availability nudge */}
-          <AnimatePresence>
-            {hasNoAvailability && hintDismissed && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 flex items-center gap-3"
-              >
-                <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-                <p className="text-xs text-amber-800 font-medium">You have no upcoming availability. Select dates below to get started.</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Calendar card */}
-          <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden flex flex-col">
-            {/* Month nav */}
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-0.5">Select Dates</p>
-                <p className="font-bold text-slate-900 text-base tracking-tight">{format(calendarMonth, 'MMMM yyyy')}</p>
               </div>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCalendarMonth(prev => subMonths(prev, 1))}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all text-slate-400 hover:text-slate-700">
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button onClick={() => setCalendarMonth(new Date())}
-                  className="px-2.5 py-1 text-[10px] font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all tracking-wide">
-                  Today
-                </button>
-                <button onClick={() => setCalendarMonth(prev => addMonths(prev, 1))}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-all text-slate-400 hover:text-slate-700">
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+
+              {/* Step pills — always visible, contextual highlight */}
+              <div className="flex items-center gap-2">
+                {[
+                  { step: '1', label: 'Select dates', active: selectedDates.length === 0 && stagedWindows.length === 0 },
+                  { step: '2', label: 'Set hours', active: selectedDates.length > 0 },
+                  { step: '3', label: 'Publish', active: stagedWindows.length > 0 },
+                ].map(({ step, label, active }) => (
+                  <div
+                    key={step}
+                    className={cn(
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all',
+                      active
+                        ? 'bg-slate-900 border-slate-900 text-white'
+                        : 'bg-white border-slate-200 text-slate-400'
+                    )}
+                  >
+                    <span className={cn(
+                      'w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold',
+                      active ? 'bg-white text-slate-900' : 'bg-slate-100 text-slate-400'
+                    )}>{step}</span>
+                    {label}
+                  </div>
+                ))}
               </div>
             </div>
 
+            {/* Calendar grid */}
             <div className="p-4 flex-1">
               <div className="grid grid-cols-7 mb-2">
                 {DAYS_SHORT.map(d => (
@@ -598,7 +600,30 @@ export default function TrainerSchedule() {
               </div>
             </div>
 
-            {/* Selected dates action */}
+            {/* Empty state CTA when nothing is selected */}
+            <AnimatePresence>
+              {selectedDates.length === 0 && stagedWindows.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-t border-dashed border-slate-200 overflow-hidden"
+                >
+                  <div className="px-5 py-4 flex items-center gap-3 bg-slate-50/60">
+                    <div className="w-8 h-8 rounded-xl bg-slate-200/60 flex items-center justify-center shrink-0">
+                      <CalendarPlus className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      <span className="font-semibold text-slate-700">Tap any date</span> to select it, then set your hours for that day.
+                      You can select multiple dates at once.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Selected dates — quick time selector (inline, no modal required for fast path) */}
             <AnimatePresence>
               {selectedDates.length > 0 && (
                 <motion.div
@@ -608,32 +633,97 @@ export default function TrainerSchedule() {
                   transition={{ duration: 0.22, ease: 'easeInOut' }}
                   className="border-t border-slate-100 overflow-hidden"
                 >
-                  <div className="p-4 bg-slate-50/70">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-slate-700">
+                  <div className="px-4 pt-3 pb-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-xs font-semibold text-slate-800">
                         {selectedDates.length} date{selectedDates.length > 1 ? 's' : ''} selected
                       </p>
-                      <button onClick={() => setSelectedDates([])} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-                        Clear all
+                      <button onClick={() => setSelectedDates([])} className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors">
+                        Clear
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {selectedDates.sort().map(d => (
-                        <span key={d} className="inline-flex items-center gap-1 px-2 py-1 bg-white text-slate-700 text-[11px] font-medium rounded-lg border border-slate-200">
+                        <span key={d} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 text-[11px] font-medium rounded-lg">
                           {format(new Date(d + 'T12:00:00'), 'MMM d')}
-                          <button onClick={() => toggleDate(d)} className="text-slate-300 hover:text-red-400 transition-colors">
+                          <button onClick={() => toggleDate(d)} className="text-slate-400 hover:text-red-400 transition-colors">
                             <X className="w-3 h-3" />
                           </button>
                         </span>
                       ))}
                     </div>
-                    <Button
-                      onClick={() => setShowAddForm(true)}
-                      className="w-full rounded-xl font-semibold gap-2 bg-slate-900 hover:bg-slate-800 text-white h-9 text-sm shadow-sm"
+                  </div>
+
+                  {/* Quick preset grid — primary interaction, no modal needed */}
+                  <div className="px-4 pb-3">
+                    <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-2">Quick select hours</p>
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {[
+                        { label: 'Morning', sub: '8:00 AM – 12:00 PM', start: '08:00', end: '12:00' },
+                        { label: 'Afternoon', sub: '1:00 – 5:00 PM', start: '13:00', end: '17:00' },
+                        { label: 'Evening', sub: '5:00 – 9:00 PM', start: '17:00', end: '21:00' },
+                        { label: 'Full Day', sub: '8:00 AM – 9:00 PM', start: '08:00', end: '21:00' },
+                      ].map(p => {
+                        const isActive = newStart === p.start && newEnd === p.end;
+                        return (
+                          <button
+                            key={p.label}
+                            onClick={() => { setNewStart(p.start); setNewEnd(p.end); }}
+                            className={cn(
+                              'flex flex-col px-3 py-2.5 rounded-xl text-left border transition-all',
+                              isActive
+                                ? 'bg-slate-900 border-slate-900'
+                                : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                            )}
+                          >
+                            <p className={cn('text-xs font-semibold', isActive ? 'text-white' : 'text-slate-800')}>{p.label}</p>
+                            <p className={cn('text-[10px] mt-0.5', isActive ? 'text-white/60' : 'text-slate-400')}>{p.sub}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom time row */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">From</label>
+                        <select
+                          value={newStart}
+                          onChange={e => setNewStart(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
+                        >
+                          {TIMES.map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
+                        </select>
+                      </div>
+                      <div className="text-slate-300 text-xs mt-5">→</div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">To</label>
+                        <select
+                          value={newEnd}
+                          onChange={e => setNewEnd(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
+                        >
+                          {TIMES.filter(t => t > newStart).map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
+                          <option value="23:59">11:59 PM</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {newStart >= newEnd && (
+                      <p className="text-red-500 text-xs font-medium flex items-center gap-1.5 mb-2">
+                        <AlertCircle className="w-3.5 h-3.5" />
+                        End time must be after start time
+                      </p>
+                    )}
+
+                    <button
+                      onClick={addWindowsForSelectedDates}
+                      disabled={newStart >= newEnd}
+                      className="w-full flex items-center justify-center gap-2 h-9 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all active:scale-[0.98] shadow-sm"
                     >
-                      <CalendarPlus className="w-4 h-4" />
-                      Set Time Window
-                    </Button>
+                      <Plus className="w-4 h-4" />
+                      Add {selectedDates.length} Day{selectedDates.length > 1 ? 's' : ''} · {formatTimeLabel(newStart)} – {formatTimeLabel(newEnd)}
+                    </button>
                   </div>
                 </motion.div>
               )}
@@ -703,18 +793,13 @@ export default function TrainerSchedule() {
             )}
           </AnimatePresence>
 
-          {/* Today's Sessions accordion */}
+          {/* Today's Sessions */}
           <AccordionSection
-            icon={Zap}
-            iconBg="bg-emerald-50"
-            iconColor="text-emerald-600"
-            title="Today's Sessions"
-            subtitle={format(new Date(), 'EEEE, MMMM d')}
+            icon={Zap} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+            title="Today's Sessions" subtitle={format(new Date(), 'EEEE, MMMM d')}
             badge={`${todayCount} ${todayCount === 1 ? 'session' : 'sessions'}`}
             badgeBg={todayCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400'}
-            defaultOpen={true}
-            loading={isLoadingToday}
-            loadingRows={2}
+            defaultOpen={true} loading={isLoadingToday} loadingRows={2}
           >
             {!todayBookingsData?.bookings?.length ? (
               <div className="flex items-center gap-3 px-5 py-5">
@@ -722,7 +807,7 @@ export default function TrainerSchedule() {
                   <Calendar className="w-4 h-4 text-slate-300" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500">No sessions scheduled today</p>
+                  <p className="text-sm font-medium text-slate-500">No sessions today</p>
                   <p className="text-xs text-slate-400 mt-0.5">Your schedule is clear.</p>
                 </div>
               </div>
@@ -735,18 +820,13 @@ export default function TrainerSchedule() {
             )}
           </AccordionSection>
 
-          {/* Upcoming Sessions accordion */}
+          {/* Upcoming Sessions */}
           <AccordionSection
-            icon={TrendingUp}
-            iconBg="bg-blue-50"
-            iconColor="text-blue-600"
-            title="Upcoming Sessions"
-            subtitle="Future confirmed bookings"
+            icon={TrendingUp} iconBg="bg-blue-50" iconColor="text-blue-600"
+            title="Upcoming Sessions" subtitle="Future confirmed bookings"
             badge={`${upcomingCount} ${upcomingCount === 1 ? 'booking' : 'bookings'}`}
             badgeBg={upcomingCount > 0 ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-400'}
-            defaultOpen={upcomingCount > 0}
-            loading={isLoadingUpcoming}
-            loadingRows={3}
+            defaultOpen={upcomingCount > 0} loading={isLoadingUpcoming} loadingRows={3}
           >
             {!upcomingBookingsData?.bookings?.length ? (
               <div className="flex items-center gap-3 px-5 py-5">
@@ -767,26 +847,22 @@ export default function TrainerSchedule() {
             )}
           </AccordionSection>
 
-          {/* Published Availability accordion */}
+          {/* Published Availability */}
           <AccordionSection
-            icon={Sparkles}
-            iconBg="bg-amber-50"
-            iconColor="text-amber-600"
-            title="Published Availability"
-            subtitle="Your upcoming open slots"
+            icon={Sparkles} iconBg="bg-amber-50" iconColor="text-amber-600"
+            title="Published Availability" subtitle="Your upcoming open slots"
             badge={groupedExisting.length > 0 ? `${futureSlotCount} ${futureSlotCount === 1 ? 'slot' : 'slots'}` : undefined}
             badgeBg="bg-amber-50 text-amber-700"
-            defaultOpen={groupedExisting.length > 0}
-            loading={isLoadingExisting}
-            loadingRows={3}
+            defaultOpen={groupedExisting.length > 0} loading={isLoadingExisting}
+            loadingRows={3} loadingType="availability"
           >
             {groupedExisting.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center px-5">
                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-3 border border-dashed border-slate-200">
                   <Calendar className="w-5 h-5 text-slate-300" />
                 </div>
-                <p className="text-sm font-medium text-slate-400 mb-1">No upcoming availability published</p>
-                <p className="text-xs text-slate-300">Select dates on the calendar to get started.</p>
+                <p className="text-sm font-medium text-slate-400 mb-1">No upcoming availability</p>
+                <p className="text-xs text-slate-300">Select dates on the calendar to publish your slots.</p>
               </div>
             ) : (
               <div className="p-4 space-y-2 max-h-[340px] overflow-y-auto">
@@ -833,125 +909,6 @@ export default function TrainerSchedule() {
 
         </div>
       </div>
-
-      {/* Add Time Window Modal */}
-      <AnimatePresence>
-        {showAddForm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
-            onClick={e => e.target === e.currentTarget && setShowAddForm(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, y: 24, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 24, scale: 0.97 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-              className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-900">Set Time Window</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Applies to {selectedDates.length} selected date{selectedDates.length > 1 ? 's' : ''}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowAddForm(false)}
-                  className="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition-all"
-                >
-                  <X className="w-4 h-4 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="px-6 py-5 space-y-5">
-                <div className="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  {selectedDates.sort().map(d => (
-                    <span key={d} className="px-2 py-1 bg-white text-slate-700 text-[11px] font-medium rounded-lg border border-slate-200">
-                      {format(new Date(d + 'T12:00:00'), 'MMM d')}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">Start Time</label>
-                    <select
-                      value={newStart}
-                      onChange={e => setNewStart(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
-                    >
-                      {TIMES.map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1.5">End Time</label>
-                    <select
-                      value={newEnd}
-                      onChange={e => setNewEnd(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-medium bg-white transition-all"
-                    >
-                      {TIMES.filter(t => t > newStart).map(t => <option key={t} value={t}>{formatTimeLabel(t)}</option>)}
-                      <option value="23:59">11:59 PM</option>
-                    </select>
-                  </div>
-                </div>
-
-                {newStart >= newEnd && (
-                  <p className="text-red-500 text-xs font-medium flex items-center gap-1.5">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    End time must be after start time
-                  </p>
-                )}
-
-                <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.15em] mb-2">Quick Presets</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: 'Morning', sub: '8:00 – 12:00 PM', start: '08:00', end: '12:00' },
-                      { label: 'Afternoon', sub: '1:00 – 5:00 PM', start: '13:00', end: '17:00' },
-                      { label: 'Evening', sub: '5:00 – 9:00 PM', start: '17:00', end: '21:00' },
-                      { label: 'Full Day', sub: 'All day', start: '00:00', end: '23:59' },
-                    ].map(p => {
-                      const active = newStart === p.start && newEnd === p.end;
-                      return (
-                        <button
-                          key={p.label}
-                          onClick={() => { setNewStart(p.start); setNewEnd(p.end); }}
-                          className={cn(
-                            'flex flex-col px-3 py-2.5 rounded-xl text-left border transition-all',
-                            active ? 'bg-slate-900 border-slate-900' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-                          )}
-                        >
-                          <p className={cn('text-xs font-semibold', active ? 'text-white' : 'text-slate-800')}>{p.label}</p>
-                          <p className={cn('text-[10px] mt-0.5', active ? 'text-white/60' : 'text-slate-400')}>{p.sub}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-6 pb-6 flex gap-3">
-                <Button variant="outline" onClick={() => setShowAddForm(false)} className="flex-1 rounded-xl font-medium border-slate-200 text-slate-600 h-10">
-                  Cancel
-                </Button>
-                <Button
-                  onClick={addWindowsForSelectedDates}
-                  disabled={newStart >= newEnd}
-                  className="flex-1 rounded-xl font-semibold bg-slate-900 hover:bg-slate-800 text-white gap-2 h-10 shadow-sm disabled:opacity-40"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add to {selectedDates.length} Date{selectedDates.length > 1 ? 's' : ''}
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
