@@ -19,9 +19,9 @@ import {
   Play,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClerk, useUser } from '@clerk/clerk-react';
 import { Button } from '../components/ui/Button';
 import { cn } from '../lib/utils';
-import { authService } from '../services/authService';
 
 interface NavItem {
   label: string;
@@ -31,7 +31,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/trainer/dashboard', icon: LayoutDashboard, roles: ['trainer'] },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['client', 'trainer'] },
   { label: 'Find Trainers', href: '/trainers', icon: Search, roles: ['client'] },
   { label: 'My Schedule', href: '/trainer/schedule', icon: Calendar, roles: ['trainer'] },
   { label: 'My Clients', href: '/trainer/clients', icon: Award, roles: ['trainer'] },
@@ -50,15 +50,18 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const handleLogout = () => {
-    authService.signOut();
+  const { signOut } = useClerk();
+  const { user: clerkUser } = useUser();
+
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
-  const userRole = user?.role || 'trainer';
+  const userRole = user?.role || 'client';
   const filteredNav = NAV_ITEMS.filter((item) => item.roles.includes(userRole));
-  const displayName = user?.name || 'User';
-  const avatarUrl: string | undefined = undefined;
+  const displayName = user?.name || clerkUser?.fullName || 'User';
+  const avatarUrl = clerkUser?.imageUrl;
   const initials = displayName.charAt(0).toUpperCase();
 
   return (

@@ -1,94 +1,73 @@
+import { API_BASE_URL } from '../config';
+
+const API_URL = `${API_BASE_URL}/api/auth`;
+
 export interface AuthResponse {
   email: string;
   firstName?: string;
   lastName?: string;
-  role: 'client' | 'trainer';
+  token?: string; // Standard practice, though curl didn't specify
+  [key: string]: any;
 }
 
-export interface AuthUser extends AuthResponse {
-  id: string;
-}
-
-const USERS_KEY = 'trainliv_users';
-const CURRENT_USER_KEY = 'trainliv_current_user';
-
-const getStoredUsers = (): Record<string, any> => {
-  const users = localStorage.getItem(USERS_KEY);
-  return users ? JSON.parse(users) : {};
-};
-
-const saveUsers = (users: Record<string, any>) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const parseAuthError = (data: any): string => {
+  if (!data) return 'Action failed';
+  
+  if (typeof data.message === 'string') {
+    // Check if the backend relayed a Clerk error as a stringified JSON
+    if (data.message.includes('Clerk signup error:')) {
+      try {
+        const jsonStr = data.message.split('Clerk signup error:')[1].trim();
+        const parsed = JSON.parse(jsonStr);
+        if (parsed.errors && parsed.errors[0]?.message) {
+          return parsed.errors[0].message;
+        }
+      } catch (e) {
+        // Fallback to original message
+      }
+    }
+    return data.message;
+  }
+  
+  if (Array.isArray(data.errors) && data.errors[0]?.message) {
+    return data.errors[0].message;
+  }
+  
+  return 'Action failed';
 };
 
 export const authService = {
-  async signUp(data: { email: string; password: string; firstName: string; lastName: string; role?: 'client' | 'trainer' }): Promise<AuthUser> {
-    const users = getStoredUsers();
+  async signUp(data: { email: string; password: string; firstName: string; lastName: string }): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/signup`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-    if (users[data.email]) {
-      throw new Error('Email already registered');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseAuthError(errorData));
     }
 
-    if (!data.password || data.password.length < 6) {
-      throw new Error('Password must be at least 6 characters');
+    return response.json();
+  },
+
+  async signIn(data: { email: string; password: string }): Promise<AuthResponse> {
+    const response = await fetch(`${API_URL}/signin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(parseAuthError(errorData));
     }
 
-    const userId = `user_${Date.now()}`;
-    const userData = {
-      id: userId,
-      email: data.email,
-      password: btoa(data.password),
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role || 'client',
-    };
-
-    users[data.email] = userData;
-    saveUsers(users);
-
-    const user: AuthUser = {
-      id: userId,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      role: data.role || 'client',
-    };
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    return user;
-  },
-
-  async signIn(data: { email: string; password: string }): Promise<AuthUser> {
-    const users = getStoredUsers();
-    const user = users[data.email];
-
-    if (!user || atob(user.password) !== data.password) {
-      throw new Error('Invalid email or password');
-    }
-
-    const authUser: AuthUser = {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-    };
-
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(authUser));
-    return authUser;
-  },
-
-  signOut(): void {
-    localStorage.removeItem(CURRENT_USER_KEY);
-    localStorage.removeItem('mockTrainer');
-  },
-
-  getCurrentUser(): AuthUser | null {
-    const user = localStorage.getItem(CURRENT_USER_KEY);
-    return user ? JSON.parse(user) : null;
-  },
-
-  isSignedIn(): boolean {
-    return localStorage.getItem(CURRENT_USER_KEY) !== null;
+    return response.json();
   },
 };
