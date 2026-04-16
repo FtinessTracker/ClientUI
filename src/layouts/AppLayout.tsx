@@ -31,8 +31,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['client'] },
-  // { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['trainer'] }, // trainer dashboard commented out
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['client', 'trainer'] },
   { label: 'Find Trainers', href: '/trainers', icon: Search, roles: ['client'] },
   { label: 'My Schedule', href: '/trainer/schedule', icon: Calendar, roles: ['trainer'] },
   { label: 'My Clients', href: '/trainer/clients', icon: Award, roles: ['trainer'] },
