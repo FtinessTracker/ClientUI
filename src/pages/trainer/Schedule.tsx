@@ -6,7 +6,7 @@ import {
   Calendar, Clock, Plus, Video, ChevronLeft, ChevronRight,
   CircleCheck as CheckCircle, CircleAlert as AlertCircle, Globe,
   Send, X, CalendarPlus, Loader as Loader2, Play, Zap,
-  TrendingUp, Sparkles, ArrowRight,
+  TrendingUp, Sparkles, ArrowRight, ChevronDown,
 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, getDay,
@@ -167,6 +167,69 @@ function SessionRow({ booking, idx, showDate = false, onJoin }: {
           Join
         </motion.button>
       )}
+    </motion.div>
+  );
+}
+
+interface AccordionSectionProps {
+  delay: number;
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  badge?: React.ReactNode;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function AccordionSection({ delay, icon, iconBg, title, subtitle, badge, defaultOpen = false, children }: AccordionSectionProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.3 }}
+      className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
+    >
+      <button
+        onClick={() => setOpen(prev => !prev)}
+        className="w-full px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/60 transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className={cn('w-8 h-8 rounded-xl flex items-center justify-center shrink-0', iconBg)}>
+            {icon}
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-semibold text-slate-900">{title}</p>
+            <p className="text-[11px] text-slate-400">{subtitle}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {badge}
+          <motion.div
+            animate={{ rotate: open ? 180 : 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+          >
+            <ChevronDown className="w-4 h-4 text-slate-400" />
+          </motion.div>
+        </div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden border-t border-slate-100"
+          >
+            {children}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -645,35 +708,36 @@ export default function TrainerSchedule() {
             )}
           </AnimatePresence>
 
-          {/* Today's Sessions */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
-          >
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-emerald-50 rounded-xl flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Today's Sessions</p>
-                  <p className="text-[11px] text-slate-400">{format(new Date(), 'EEEE, MMMM d')}</p>
-                </div>
-              </div>
+          {/* Today's Sessions — Accordion */}
+          <AccordionSection
+            delay={0.15}
+            icon={<Zap className="w-4 h-4 text-emerald-600" />}
+            iconBg="bg-emerald-50"
+            title="Today's Sessions"
+            subtitle={format(new Date(), 'EEEE, MMMM d')}
+            badge={
               <span className={cn(
                 'px-2.5 py-1 rounded-full text-[11px] font-medium',
                 todayCount > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400'
               )}>
-                {todayCount} {todayCount === 1 ? 'session' : 'sessions'}
+                {isLoadingToday ? '—' : `${todayCount} ${todayCount === 1 ? 'session' : 'sessions'}`}
               </span>
-            </div>
-
+            }
+            defaultOpen
+          >
             <div className="divide-y divide-slate-50">
               {isLoadingToday ? (
                 <div className="p-4 space-y-3">
-                  {[1, 2].map(i => <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse" />)}
+                  {[1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-3 px-1 py-1">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-slate-100 rounded-full animate-pulse w-32" />
+                        <div className="h-3 bg-slate-100 rounded-full animate-pulse w-24" />
+                      </div>
+                      <div className="w-14 h-7 bg-slate-100 rounded-lg animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : !todayBookingsData?.bookings?.length ? (
                 <div className="flex items-center gap-3 px-5 py-5">
@@ -691,37 +755,38 @@ export default function TrainerSchedule() {
                 ))
               )}
             </div>
-          </motion.div>
+          </AccordionSection>
 
-          {/* Upcoming Sessions */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
-          >
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-blue-50 rounded-xl flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Upcoming Sessions</p>
-                  <p className="text-[11px] text-slate-400">Future bookings</p>
-                </div>
-              </div>
+          {/* Upcoming Sessions — Accordion */}
+          <AccordionSection
+            delay={0.2}
+            icon={<TrendingUp className="w-4 h-4 text-blue-600" />}
+            iconBg="bg-blue-50"
+            title="Upcoming Sessions"
+            subtitle="Future bookings"
+            badge={
               <span className={cn(
                 'px-2.5 py-1 rounded-full text-[11px] font-medium',
                 upcomingCount > 0 ? 'bg-blue-50 text-blue-700' : 'bg-slate-50 text-slate-400'
               )}>
-                {upcomingCount} {upcomingCount === 1 ? 'booking' : 'bookings'}
+                {isLoadingUpcoming ? '—' : `${upcomingCount} ${upcomingCount === 1 ? 'booking' : 'bookings'}`}
               </span>
-            </div>
-
+            }
+            defaultOpen
+          >
             <div className="divide-y divide-slate-50">
               {isLoadingUpcoming ? (
                 <div className="p-4 space-y-3">
-                  {[1, 2, 3].map(i => <div key={i} className="h-14 bg-slate-50 rounded-xl animate-pulse" />)}
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-center gap-3 px-1 py-1">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-slate-100 rounded-full animate-pulse w-36" />
+                        <div className="h-3 bg-slate-100 rounded-full animate-pulse w-28" />
+                      </div>
+                      <div className="w-14 h-7 bg-slate-100 rounded-lg animate-pulse" />
+                    </div>
+                  ))}
                 </div>
               ) : !upcomingBookingsData?.bookings?.length ? (
                 <div className="flex items-center gap-3 px-5 py-5">
@@ -739,36 +804,36 @@ export default function TrainerSchedule() {
                 ))
               )}
             </div>
-          </motion.div>
+          </AccordionSection>
 
-          {/* Published Availability — future only */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25, duration: 0.3 }}
-            className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
-          >
-            <div className="px-5 py-3.5 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 bg-amber-50 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Published Availability</p>
-                  <p className="text-[11px] text-slate-400">Upcoming open slots</p>
-                </div>
-              </div>
-              {groupedExisting.length > 0 && (
+          {/* Published Availability — Accordion */}
+          <AccordionSection
+            delay={0.25}
+            icon={<Sparkles className="w-4 h-4 text-amber-600" />}
+            iconBg="bg-amber-50"
+            title="Published Availability"
+            subtitle="Upcoming open slots"
+            badge={
+              !isLoadingExisting && groupedExisting.length > 0 ? (
                 <span className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700">
                   {futureSlotCount} {futureSlotCount === 1 ? 'slot' : 'slots'}
                 </span>
-              )}
-            </div>
-
+              ) : null
+            }
+            defaultOpen
+          >
             <div className="p-4">
               {isLoadingExisting ? (
                 <div className="space-y-3">
-                  {[1, 2, 3].map(i => <div key={i} className="h-16 bg-slate-50 rounded-xl animate-pulse" />)}
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="rounded-xl border border-slate-100 overflow-hidden">
+                      <div className="h-9 bg-slate-50 animate-pulse" />
+                      <div className="px-3.5 py-2.5 flex gap-2">
+                        <div className="h-7 w-28 bg-slate-100 rounded-lg animate-pulse" />
+                        <div className="h-7 w-24 bg-slate-100 rounded-lg animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : groupedExisting.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -832,7 +897,7 @@ export default function TrainerSchedule() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </AccordionSection>
 
         </div>
       </div>

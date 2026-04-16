@@ -1,4 +1,22 @@
 import React from 'react';
+import { Calendar } from 'lucide-react';
+
+export default function TrainerDashboard() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4">
+      <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center">
+        <Calendar className="w-8 h-8 text-slate-300" />
+      </div>
+      <div>
+        <h2 className="text-xl font-bold text-slate-700">Dashboard coming soon</h2>
+        <p className="text-sm text-slate-400 mt-1">This section is under construction.</p>
+      </div>
+    </div>
+  );
+}
+
+/*
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Users, Calendar, DollarSign, Star, Clock, Video, ChevronRight, Activity, ArrowUpRight, TrendingUp, MoveHorizontal as MoreHorizontal } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -46,7 +64,6 @@ export default function TrainerDashboard() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -69,7 +86,6 @@ export default function TrainerDashboard() {
         </div>
       </motion.div>
 
-      {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Total Earnings', value: '$4,250', change: '+12.5%', icon: DollarSign, color: 'text-emerald-600', bg: 'bg-emerald-50', up: true, delay: 0.05 },
@@ -103,7 +119,6 @@ export default function TrainerDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Earnings Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -154,7 +169,6 @@ export default function TrainerDashboard() {
           </Card>
         </motion.div>
 
-        {/* Today's Schedule */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -184,8 +198,8 @@ export default function TrainerDashboard() {
                     <span className="text-xs font-black text-accent bg-accent/8 px-2.5 py-1 rounded-lg border border-accent/15">4:00 PM</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="h-8 text-xs rounded-xl font-bold px-4 shadow-sm"
                       onClick={() => {
                         const roomId = booking.meetingId || booking.id;
@@ -226,9 +240,7 @@ export default function TrainerDashboard() {
         </motion.div>
       </div>
 
-      {/* Recent Activity + Active Clients */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -269,7 +281,6 @@ export default function TrainerDashboard() {
           </Card>
         </motion.div>
 
-        {/* Active Clients */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -339,3 +350,4 @@ function DashboardSkeleton() {
     </div>
   );
 }
+*/
