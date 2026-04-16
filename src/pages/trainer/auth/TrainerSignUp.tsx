@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../../../services/authService';
-import { Dumbbell, ArrowLeft, Shield, Zap, Users, Star, Mail, Lock, User as UserIcon, CheckCircle2, XCircle } from 'lucide-react';
+import { Dumbbell, ArrowLeft, Shield, Zap, Users, Star, Mail, Lock, User as UserIcon, CircleCheck as CheckCircle2, Circle as XCircle } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 
@@ -59,6 +59,7 @@ export default function TrainerSignUp() {
         password: formData.password,
         firstName: formData.firstName,
         lastName: formData.lastName,
+        role: 'trainer',
       });
 
       // Signup successful — show success screen then redirect

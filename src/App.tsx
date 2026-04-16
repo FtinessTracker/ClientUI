@@ -1,9 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuth } from '@clerk/clerk-react';
 import { motion } from 'framer-motion';
-import { Dumbbell, TriangleAlert as AlertTriangle } from 'lucide-react';
+import { Dumbbell } from 'lucide-react';
 import AppLayout from './layouts/AppLayout';
 import ClientLayout from './layouts/ClientLayout';
 import Home from './pages/Home';
@@ -32,6 +31,7 @@ import ProductsPage from './pages/client/ProductsPage';
 import ResearchArticles from './pages/client/ResearchArticles';
 import SessionRoom from './pages/shared/SessionRoom';
 import { useAppUser } from './hooks/useAppUser';
+import { authService } from './services/authService';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,25 +75,22 @@ function LoadingScreen() {
 
 function TrainerRoute({
   children,
-  allowedRoles,
 }: {
   children: React.ReactNode;
-  allowedRoles?: string[];
 }) {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { appUser, isLoaded: userLoaded } = useAppUser();
+  const { appUser, isLoaded } = useAppUser();
   const location = useLocation();
 
-  if (!isLoaded || !userLoaded) return <LoadingScreen />;
+  if (!isLoaded) return <LoadingScreen />;
 
-  // Support mock trainer login
+  const isSignedIn = authService.isSignedIn();
   const isMocked = localStorage.getItem('mockTrainer') !== null;
 
   if (!isSignedIn && !isMocked) {
     return <Navigate to="/trainer/sign-in" state={{ from: location }} replace />;
   }
 
-  if (!isMocked && allowedRoles && appUser && !allowedRoles.includes(appUser.role)) {
+  if (!isMocked && appUser && appUser.role !== 'trainer') {
     return <Navigate to="/calendar" replace />;
   }
 
@@ -101,30 +98,27 @@ function TrainerRoute({
 }
 
 function ClientRoute({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { appUser, isLoaded: userLoaded } = useAppUser();
+  const { appUser, isLoaded } = useAppUser();
   const location = useLocation();
 
-  if (!isLoaded || !userLoaded) return <LoadingScreen />;
+  if (!isLoaded) return <LoadingScreen />;
+
+  const isSignedIn = authService.isSignedIn();
 
   if (!isSignedIn) {
     return <Navigate to="/sign-up" state={{ from: location }} replace />;
   }
 
   if (appUser?.role === 'trainer') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/trainer/dashboard" replace />;
   }
 
   return <ClientLayout>{children}</ClientLayout>;
 }
 
 function SessionRoute({ children }: { children: React.ReactNode }) {
-  const { isSignedIn, isLoaded } = useAuth();
   const location = useLocation();
-
-  if (!isLoaded) return <LoadingScreen />;
-
-  // Support mock trainer login for session entry
+  const isSignedIn = authService.isSignedIn();
   const isMocked = localStorage.getItem('mockTrainer') !== null;
 
   if (!isSignedIn && !isMocked) {
@@ -135,16 +129,27 @@ function SessionRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { isSignedIn, isLoaded } = useAuth();
   const { appUser } = useAppUser();
-
-  if (!isLoaded) return <LoadingScreen />;
+  const isSignedIn = authService.isSignedIn();
+  const currentUser = authService.getCurrentUser();
 
   return (
     <Routes>
       <Route path="/" element={<Home user={appUser} />} />
-      <Route path="/sign-in" element={isSignedIn ? <Navigate to="/calendar" /> : <SignInPage />} />
-      <Route path="/sign-up" element={isSignedIn ? <Navigate to="/onboarding" /> : <SignUpPage />} />
+      <Route
+        path="/sign-in"
+        element={isSignedIn
+          ? <Navigate to={currentUser?.role === 'trainer' ? '/trainer/dashboard' : '/calendar'} />
+          : <SignInPage />
+        }
+      />
+      <Route
+        path="/sign-up"
+        element={isSignedIn
+          ? <Navigate to={currentUser?.role === 'trainer' ? '/trainer/dashboard' : '/onboarding'} />
+          : <SignUpPage />
+        }
+      />
       <Route path="/onboarding" element={isSignedIn ? <OnboardingQuestions /> : <Navigate to="/sign-up" />} />
       <Route path="/login" element={<Navigate to="/sign-in" replace />} />
 
@@ -160,58 +165,27 @@ function AppRoutes() {
       <Route path="/book/:id" element={<ClientRoute><BookingFlow /></ClientRoute>} />
       <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
-      <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
-      <Route path="/trainer" element={<TrainerSignIn />} />
-      <Route path="/trainer/login" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-in" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-up" element={<TrainerSignUp />} />
+      <Route path="/trainer/login" element={<Navigate to="/trainer/sign-in" replace />} />
       <Route path="/trainer-onboarding" element={<TrainerOnboarding />} />
-      <Route path="/trainer/schedule" element={<TrainerRoute allowedRoles={['trainer']}><TrainerSchedule /></TrainerRoute>} />
-      <Route path="/trainer/clients" element={<TrainerRoute allowedRoles={['trainer']}><TrainerClients /></TrainerRoute>} />
-      <Route path="/trainer/messages" element={<TrainerRoute allowedRoles={['trainer']}><TrainerMessages /></TrainerRoute>} />
-      <Route path="/trainer/payments" element={<TrainerRoute allowedRoles={['trainer']}><TrainerPayments /></TrainerRoute>} />
-      <Route path="/trainer/library" element={<TrainerRoute allowedRoles={['trainer']}><LibraryPage /></TrainerRoute>} />
-      <Route path="/trainer/profile" element={<TrainerRoute allowedRoles={['trainer']}><TrainerProfilePage /></TrainerRoute>} />
+
+      <Route path="/trainer/dashboard" element={<TrainerRoute><TrainerDashboard /></TrainerRoute>} />
+      <Route path="/trainer/schedule" element={<TrainerRoute><TrainerSchedule /></TrainerRoute>} />
+      <Route path="/trainer/clients" element={<TrainerRoute><TrainerClients /></TrainerRoute>} />
+      <Route path="/trainer/messages" element={<TrainerRoute><TrainerMessages /></TrainerRoute>} />
+      <Route path="/trainer/payments" element={<TrainerRoute><TrainerPayments /></TrainerRoute>} />
+      <Route path="/trainer/library" element={<TrainerRoute><LibraryPage /></TrainerRoute>} />
+      <Route path="/trainer/profile" element={<TrainerRoute><TrainerProfilePage /></TrainerRoute>} />
+
+      <Route path="/dashboard" element={<Navigate to="/trainer/dashboard" replace />} />
 
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }
 
-function NoClerkBanner() {
-  return (
-    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3 bg-amber-50 border border-amber-200 rounded-2xl shadow-lg text-sm font-semibold text-amber-800 max-w-sm">
-      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-      <span>Add your Clerk key in <code className="font-mono text-xs bg-amber-100 px-1.5 py-0.5 rounded">.env</code> to enable auth</span>
-    </div>
-  );
-}
-
-function NoClerkApp() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<><Home user={null} /><NoClerkBanner /></>} />
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
-  );
-}
-
 export default function App() {
-  const hasClerk = typeof import.meta.env.VITE_CLERK_PUBLISHABLE_KEY === 'string' &&
-    (import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_test_') ||
-      import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.startsWith('pk_live_')) &&
-    !import.meta.env.VITE_CLERK_PUBLISHABLE_KEY.includes('placeholder');
-
-  if (!hasClerk) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <NoClerkApp />
-      </QueryClientProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <Router>

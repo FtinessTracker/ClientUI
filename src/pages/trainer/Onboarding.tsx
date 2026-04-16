@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUser } from '@clerk/clerk-react';
+import { useAppUser } from '../../hooks/useAppUser';
 import {
   Dumbbell, ChevronRight, ChevronLeft, Check, User, Briefcase, DollarSign,
   Clock, MapPin, Instagram, Globe, Plus, X, Camera, Award
@@ -45,12 +45,12 @@ const STEPS = [
 ];
 
 export default function TrainerOnboarding() {
-  const { user } = useUser();
+  const { appUser: user } = useAppUser();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<FormState>({
-    displayName: user?.fullName || '',
+    displayName: user?.name || '',
     bio: '',
     location: '',
     yearsExperience: 1,

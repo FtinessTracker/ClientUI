@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '../../config';
-import { useUser } from '@clerk/clerk-react';
+import { useAppUser } from '../../hooks/useAppUser';
 import { getSystemTimezone } from '../../lib/timezone';
 
 type Step = 'select-slot' | 'payment' | 'confirmation';
@@ -38,7 +38,7 @@ export default function BookingFlow() {
     specialties?: string[];
     selectedDate?: string;
   } | null;
-  const { user } = useUser();
+  const { appUser: user } = useAppUser();
   const [step, setStep] = useState<Step>('select-slot');
 
   // Initialize selectedDate from state if available, otherwise default to today
@@ -131,7 +131,7 @@ export default function BookingFlow() {
         trainerId: id,
         trainerName: trainer?.name || 'Selected Trainer',
         clientId: user?.id || 'unknown_client',
-        clientName: user?.fullName || user?.firstName || 'Current User',
+        clientName: user?.name || 'Current User',
         durationInMinutes: parseInt(selectedDuration) || 60,
         date: dateStr,
         startTime: selectedTime,

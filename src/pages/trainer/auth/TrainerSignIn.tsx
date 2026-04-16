@@ -21,28 +21,13 @@ export default function TrainerSignIn() {
     try {
       const response = await authService.signIn({ email, password });
 
-      const trainerData = {
-        id: response.userId || response.id || 'trainer-id',
-        name: response.firstName 
-          ? `${response.firstName} ${response.lastName}` 
-          : (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1) + ' Coach'),
-        email: response.email,
-        role: 'trainer',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${response.firstName || email.split('@')[0]}`,
-        joinedAt: new Date().toISOString(),
-      };
-
-      localStorage.setItem('mockTrainer', JSON.stringify(trainerData));
-
-      // Save session token and userId for authenticated API requests
-      if (response.sessionToken) {
-        localStorage.setItem('sessionToken', response.sessionToken);
-      }
-      if (response.userId) {
-        localStorage.setItem('userId', response.userId);
+      if (response.role !== 'trainer') {
+        setError('This account is not a trainer account. Please use the client sign-in.');
+        setIsLoading(false);
+        return;
       }
 
-      navigate('/dashboard');
+      navigate('/trainer/dashboard');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password. Please try again.');
     } finally {

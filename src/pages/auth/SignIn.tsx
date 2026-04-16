@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { SignIn } from '@clerk/clerk-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Dumbbell, ArrowLeft, Star, Shield, Zap, Users } from 'lucide-react';
+import { Dumbbell, ArrowLeft, Star, Shield, Zap, Users, Eye, EyeOff, Mail, Lock, ArrowRight, Loader as Loader2 } from 'lucide-react';
+import { authService } from '../../services/authService';
 
 const STATS = [
   { value: '10k+', label: 'Active Members' },
@@ -16,12 +16,47 @@ const FEATURES = [
   { icon: Users, label: 'Live 1:1 HD Video Sessions' },
 ];
 
+interface FieldErrors {
+  email?: string;
+  password?: string;
+  general?: string;
+}
+
+const inputCls =
+  'h-11 w-full pl-10 pr-4 rounded-xl border border-slate-200 bg-white text-slate-900 font-medium text-sm placeholder:text-slate-300 focus:border-accent focus:ring-2 focus:ring-accent/15 transition-all outline-none';
+
 export default function SignInPage() {
-  const [oauthLoading, setOauthLoading] = useState(false);
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [form, setForm] = useState({ email: '', password: '' });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const user = await authService.signIn({
+        email: form.email.trim(),
+        password: form.password,
+      });
+      if (user.role === 'trainer') {
+        navigate('/trainer/dashboard');
+      } else {
+        navigate('/calendar');
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : 'Invalid email or password';
+      setErrors({ general: errMsg });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 flex font-sans overflow-hidden">
-      {/* Left Panel */}
       <div className="hidden lg:flex lg:w-[48%] xl:w-[52%] relative flex-col overflow-hidden">
         <motion.div
           initial={{ scale: 1.06, opacity: 0 }}
@@ -120,7 +155,6 @@ export default function SignInPage() {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="flex-1 flex flex-col bg-white relative overflow-y-auto">
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent via-emerald-400 to-teal-500" />
 
@@ -157,71 +191,88 @@ export default function SignInPage() {
               </p>
             </div>
 
-            <div
-              className={oauthLoading ? 'pointer-events-none opacity-70' : ''}
-              onClick={() => {
-                const btn = document.querySelector('[data-provider]');
-                if (btn) setOauthLoading(true);
-              }}
-            >
-              <SignIn
-                routing="hash"
-                signUpUrl="/sign-up"
-                appearance={{
-                  elements: {
-                    rootBox: 'w-full',
-                    card: 'shadow-none bg-transparent p-0 w-full',
-                    headerTitle: 'hidden',
-                    headerSubtitle: 'hidden',
-                    header: 'hidden',
-                    socialButtonsBlockButton:
-                      'h-12 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 font-semibold text-slate-700 text-sm transition-all hover:border-slate-300 hover:shadow-sm w-full gap-3 cursor-pointer',
-                    socialButtonsBlockButtonText: 'font-semibold text-slate-700 text-sm',
-                    socialButtonsBlockButtonArrow: 'hidden',
-                    socialButtonsProviderIcon: 'w-5 h-5',
-                    dividerRow: 'my-5',
-                    dividerText: 'text-slate-400 text-[11px] font-bold uppercase tracking-widest px-3',
-                    dividerLine: 'bg-slate-200',
-                    formFieldLabel:
-                      'text-[11px] font-bold text-slate-500 uppercase tracking-[0.14em] mb-1.5',
-                    formFieldInput:
-                      'h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-900 font-medium text-sm placeholder:text-slate-300 focus:border-accent focus:ring-2 focus:ring-accent/15 transition-all outline-none w-full',
-                    formFieldInputShowPasswordButton: 'text-slate-400 hover:text-slate-600',
-                    formButtonPrimary:
-                      'h-12 w-full rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold text-sm tracking-tight shadow-lg shadow-slate-900/15 hover:shadow-slate-900/25 transition-all mt-1',
-                    footerActionLink: 'hidden',
-                    footerActionText: 'hidden',
-                    footer: 'hidden',
-                    identityPreviewText: 'text-slate-700 font-medium text-sm',
-                    identityPreviewEditButtonIcon: 'text-slate-400',
-                    formFieldErrorText: 'text-red-500 text-xs font-semibold mt-1',
-                    alertText: 'text-red-700 text-sm font-medium',
-                    alert: 'bg-red-50 border border-red-100 rounded-xl p-4 mb-2',
-                    otpCodeFieldInput:
-                      'h-12 w-11 rounded-xl border border-slate-200 text-slate-900 font-bold text-lg text-center focus:border-accent focus:ring-2 focus:ring-accent/15 transition-all',
-                    form: 'gap-4',
-                    formFields: 'gap-4',
-                    formFieldRow: 'gap-4',
-                  },
-                  layout: {
-                    socialButtonsPlacement: 'top',
-                    socialButtonsVariant: 'blockButton',
-                  },
-                  variables: {
-                    colorPrimary: '#10b981',
-                    colorText: '#0f172a',
-                    colorTextSecondary: '#64748b',
-                    colorBackground: 'transparent',
-                    colorInputBackground: '#ffffff',
-                    colorInputText: '#0f172a',
-                    borderRadius: '0.75rem',
-                    fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-                    fontSize: '14px',
-                    spacingUnit: '16px',
-                  },
-                }}
-              />
-            </div>
+            {errors.general && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-700 text-sm font-semibold"
+              >
+                {errors.general}
+              </motion.div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.14em] mb-1.5">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                    <Mail className="w-4 h-4" />
+                  </div>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => {
+                      setForm(prev => ({ ...prev, email: e.target.value }));
+                      if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
+                    }}
+                    placeholder="jane@example.com"
+                    autoComplete="email"
+                    className={inputCls}
+                  />
+                </div>
+                {errors.email && <p className="text-red-500 text-xs font-semibold mt-1.5">{errors.email}</p>}
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.14em] mb-1.5">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                    <Lock className="w-4 h-4" />
+                  </div>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={form.password}
+                    onChange={(e) => {
+                      setForm(prev => ({ ...prev, password: e.target.value }));
+                      if (errors.password) setErrors(prev => ({ ...prev, password: undefined }));
+                    }}
+                    placeholder="Your password"
+                    autoComplete="current-password"
+                    className={`${inputCls} pr-11`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-red-500 text-xs font-semibold mt-1.5">{errors.password}</p>}
+              </div>
+
+              <div className="pt-1">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="h-12 w-full rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-black text-white font-bold text-sm tracking-tight shadow-lg shadow-slate-900/15 hover:shadow-slate-900/25 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      Sign In
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
 
             <p className="text-center text-slate-400 text-[11px] mt-8 leading-relaxed">
               By signing in you agree to TrainLiv's{' '}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { useAppUser } from '../../hooks/useAppUser';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, MapPin, Calendar, CreditCard as Edit3, Save, X, Camera, Shield, Target, Activity } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
@@ -47,14 +47,14 @@ function FieldRow({ label, value, editing, children }: {
 }
 
 export default function ClientProfile() {
-  const { user } = useUser();
+  const { appUser: user } = useAppUser();
 
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [profile, setProfile] = useState<ClientProfileData>({
-    displayName: user?.fullName || '',
-    phone: user?.primaryPhoneNumber?.phoneNumber || '',
+    displayName: user?.name || '',
+    phone: '',
     location: '',
     age: '',
     gender: '',

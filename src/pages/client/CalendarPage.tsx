@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, Plus, Video, Clock, MapPin, ChevronDown, Cal
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
 import { API_BASE_URL } from '../../config';
-import { useUser } from '@clerk/clerk-react';
+import { useAppUser } from '../../hooks/useAppUser';
 import { useQuery } from '@tanstack/react-query';
 import { getSystemTimezone } from '../../lib/timezone';
 
@@ -57,7 +57,7 @@ const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border:
 
 export default function CalendarPage() {
   const navigate = useNavigate();
-  const { user } = useUser();
+  const { appUser: user } = useAppUser();
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
 
   const today = new Date();

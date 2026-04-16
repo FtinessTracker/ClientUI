@@ -5,8 +5,9 @@ import {
   LogOut, Bell, Menu, X, Settings, ChevronRight, ShoppingBag, BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useClerk, useUser } from '@clerk/clerk-react';
 import { cn } from '../lib/utils';
+import { authService } from '../services/authService';
+import { useAppUser } from '../hooks/useAppUser';
 
 interface NavItem {
   label: string;
@@ -27,15 +28,14 @@ const NAV_ITEMS: NavItem[] = [
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useClerk();
-  const { user: clerkUser } = useUser();
+  const { appUser } = useAppUser();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const displayName = clerkUser?.fullName || clerkUser?.firstName || 'User';
-  const avatarUrl = clerkUser?.imageUrl;
+  const displayName = appUser?.name || 'User';
+  const avatarUrl: string | undefined = undefined;
   const initials = displayName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   useEffect(() => {
@@ -58,9 +58,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     setMobileOpen(false);
   }, [location.pathname]);
 
-  async function handleLogout() {
+  function handleLogout() {
     setProfileOpen(false);
-    await signOut();
+    authService.signOut();
     navigate('/');
   }
 

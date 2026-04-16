@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/clerk-react';
 import { User, Star, Award, Globe, Instagram, MapPin, Clock, DollarSign, CreditCard as Edit3, Check, X, Camera, ExternalLink, Plus, Trash2, ChevronRight, Languages, Briefcase, Shield, TrendingUp, MessageSquare } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { cn } from '../../lib/utils';
@@ -34,7 +33,6 @@ const DEFAULT_PROFILE: Partial<TrainerProfileRow> = {
 
 export default function TrainerProfile() {
   const { appUser } = useAppUser();
-  const { user: clerkUser } = useUser();
   const queryClient = useQueryClient();
   const [editingSection, setEditingSection] = useState<string | null>(null);
   const [draftData, setDraftData] = useState<Partial<TrainerProfileRow>>({});
@@ -118,13 +116,9 @@ export default function TrainerProfile() {
               <div className="flex items-end justify-between -mt-10 mb-4">
                 <div className="relative">
                   <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white shadow-xl bg-slate-200">
-                    {clerkUser?.imageUrl ? (
-                      <img src={clerkUser.imageUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-slate-900">
-                        <User className="w-8 h-8 text-white" />
-                      </div>
-                    )}
+                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                      <User className="w-8 h-8 text-white" />
+                    </div>
                   </div>
                   <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-accent rounded-xl flex items-center justify-center shadow-lg">
                     <Camera className="w-3.5 h-3.5 text-white" />
