@@ -46,7 +46,6 @@ interface SessionEvent {
   trainerAvailability: string[];
 }
 
-// Default avatar as inline SVG data URI (renders a clean person silhouette)
 const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23cbd5e1'%3E%3Crect width='100' height='100' fill='%23f1f5f9'/%3E%3Ccircle cx='50' cy='36' r='18'/%3E%3Cellipse cx='50' cy='90' rx='30' ry='24'/%3E%3C/svg%3E";
 
 const COLOR_MAP: Record<string, { bg: string; text: string; dot: string; border: string }> = {
@@ -63,38 +62,28 @@ export default function CalendarPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const [viewStartDate, setViewStartDate] = useState(() => {
-    const d = new Date(today);
-    return d;
-  });
+  const [viewStartDate, setViewStartDate] = useState(() => new Date(today));
   const [selectedDate, setSelectedDate] = useState<Date | null>(today);
   const [apiTrainers, setApiTrainers] = useState<ApiTrainer[]>([]);
   const [isLoadingTrainers, setIsLoadingTrainers] = useState(false);
 
   useEffect(() => {
     const fetchTrainers = async () => {
-      if (!selectedDate) {
-        setApiTrainers([]);
-        return;
-      }
+      if (!selectedDate) { setApiTrainers([]); return; }
       try {
         setIsLoadingTrainers(true);
         const year = selectedDate.getFullYear();
         const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
         const day = String(selectedDate.getDate()).padStart(2, '0');
         const dateStr = `${year}-${month}-${day}`;
-
-        const response = await fetch(`${API_BASE_URL}/api/booking/trainers/available?date=${dateStr}`, {
-          credentials: 'include'
-        });
+        const response = await fetch(`${API_BASE_URL}/api/booking/trainers/available?date=${dateStr}`, { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           setApiTrainers(data.trainers || []);
         } else {
           setApiTrainers([]);
         }
-      } catch (error) {
-        console.error('Error fetching trainers:', error);
+      } catch {
         setApiTrainers([]);
       } finally {
         setIsLoadingTrainers(false);
@@ -128,7 +117,6 @@ export default function CalendarPage() {
     const ampm = hour >= 12 ? 'PM' : 'AM';
     const formattedHour = hour % 12 || 12;
     const timeFormatted = `${formattedHour}:${m || '00'} ${ampm}`;
-
     return {
       id: `api_${t.trainerId}_${idx}`,
       day: selectedDate?.getDate() || 1,
@@ -148,16 +136,12 @@ export default function CalendarPage() {
     };
   });
 
-  const combinedSessions = apiSessions;
-
   const clientId = user?.id || 'client_001';
 
   const { data: upcomingData, isLoading: isLoadingUpcoming } = useQuery({
     queryKey: ['upcoming-bookings', clientId],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE_URL}/api/booking/clients/${clientId}/bookings/upcoming`, {
-        credentials: 'include'
-      });
+      const res = await fetch(`${API_BASE_URL}/api/booking/clients/${clientId}/bookings/upcoming`, { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to fetch upcoming bookings');
       return res.json();
     },
@@ -178,7 +162,7 @@ export default function CalendarPage() {
       trainer: b.trainerName,
       trainerId: b.trainerId,
       trainerAvatar: b.trainerProfileImageUrl || DEFAULT_AVATAR,
-      type: b.type || 'Personal Training', // Fallback type
+      type: b.type || 'Personal Training',
       mode: 'virtual' as const,
       color: 'emerald' as any
     };
@@ -198,78 +182,73 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto space-y-10 py-4 px-4 sm:px-10">
-      {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/5 blur-[120px] rounded-full" />
-      </div>
-
-      {/* Header Section */}
+    <div className="space-y-6 pb-6">
+      {/* Page Header */}
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+        transition={{ duration: 0.35 }}
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
       >
-        <div className="relative group">
-          <div className="absolute -inset-x-8 -inset-y-4 bg-gradient-to-r from-accent/10 to-transparent blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-          <h1 className="relative text-3xl sm:text-5xl font-black tracking-tight text-slate-900 leading-none">
-            Calendar<span className="text-accent ml-1">.</span>
-          </h1>
-          <p className="relative text-slate-400 font-semibold mt-2 tracking-tight flex items-center gap-2">
-            <span className="w-8 h-px bg-slate-200" />
-            Empower your fitness narrative
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Calendar</h1>
+          <p className="text-sm text-slate-400 mt-0.5">
+            {MONTHS[today.getMonth()]} {today.getFullYear()}
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" className="rounded-2xl h-14 px-6 font-bold text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all">
-            History
-          </Button>
-          <Button className="rounded-2xl font-black bg-slate-900 hover:bg-slate-800 text-white shadow-[0_20px_40px_-12px_rgba(15,23,42,0.3)] hover:shadow-[0_20px_40px_-8px_rgba(15,23,42,0.4)] gap-3 h-14 px-8 transition-all hover:scale-[1.02] active:scale-95 group">
-            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-            Book Session
-          </Button>
-        </div>
+        <Button
+          onClick={() => navigate('/trainers')}
+          className="rounded-xl font-semibold bg-slate-900 hover:bg-slate-800 text-white gap-2 h-10 px-5 shadow-sm w-fit"
+        >
+          <Plus className="w-4 h-4" />
+          Book Session
+        </Button>
       </motion.div>
 
-      <div className="grid lg:grid-cols-12 gap-8">
-        {/* Weekly Calendar Card */}
+      <div className="grid lg:grid-cols-12 gap-5">
+        {/* Calendar + Sessions */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="lg:col-span-7 bg-white/70 backdrop-blur-2xl rounded-[2.5rem] border border-white/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] overflow-hidden"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08, duration: 0.4 }}
+          className="lg:col-span-7 bg-white rounded-2xl border border-slate-100 overflow-hidden"
         >
-          <div className="flex items-center justify-between px-6 sm:px-10 py-8 sm:py-10 border-b border-slate-100/50">
+          {/* Month + Nav */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <div>
-              <p className="text-[10px] font-black text-accent uppercase tracking-[0.3em] mb-2">Weekly Pipeline</p>
-              <h2 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-baseline gap-2">
-                {MONTHS[viewStartDate.getMonth()]}
-                <span className="text-slate-300 font-bold">{viewStartDate.getFullYear()}</span>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.18em] mb-0.5">Weekly View</p>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                {MONTHS[viewStartDate.getMonth()]} <span className="text-slate-400 font-medium">{viewStartDate.getFullYear()}</span>
               </h2>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={prevWeek}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all text-slate-900 active:scale-90"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all text-slate-600 active:scale-95"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => { setViewStartDate(new Date(today)); setSelectedDate(new Date(today)); }}
+                className="px-3 py-1 text-[10px] font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-all tracking-wide"
+              >
+                Today
               </button>
               <button
                 onClick={nextWeek}
-                className="w-12 h-12 flex items-center justify-center rounded-2xl bg-white border border-slate-100 hover:border-slate-300 hover:shadow-lg transition-all text-slate-900 active:scale-90"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all text-slate-600 active:scale-95"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          <div className="p-4 px-6">
-            <div className="grid grid-cols-7 gap-px">
+          {/* Day Pills */}
+          <div className="px-4 py-3 border-b border-slate-50">
+            <div className="grid grid-cols-7 gap-1">
               {Array.from({ length: 7 }).map((_, i) => {
                 const date = new Date(viewStartDate);
                 date.setDate(viewStartDate.getDate() + i);
-
                 const isToday = date.toDateString() === today.toDateString();
                 const isSelected = selectedDate?.toDateString() === date.toDateString();
 
@@ -278,203 +257,158 @@ export default function CalendarPage() {
                     key={date.toISOString()}
                     onClick={() => setSelectedDate(isSelected ? null : date)}
                     className={cn(
-                      "relative h-24 py-4 flex flex-col items-center justify-between transition-all duration-500 group active:scale-95",
-                      isSelected ? "z-20" : "z-10 hover:bg-slate-50/50 rounded-3xl"
+                      'relative flex flex-col items-center py-2.5 px-1 rounded-xl transition-all duration-200 active:scale-95',
+                      isSelected
+                        ? 'bg-slate-900 shadow-md'
+                        : isToday
+                          ? 'bg-blue-50 ring-1 ring-blue-200'
+                          : 'hover:bg-slate-50'
                     )}
                   >
-                    {isSelected && (
-                      <motion.div
-                        layoutId="selectedDay"
-                        className="absolute inset-0 bg-slate-900 rounded-[2rem] shadow-[0_20px_40px_-12px_rgba(15,23,42,0.4)] z-0"
-                        transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                      />
-                    )}
-                    <div className="relative flex flex-col items-center z-10">
-                      <span className={cn(
-                        "text-[9px] font-black uppercase tracking-[0.2em] mb-1.5 transition-colors duration-300",
-                        isSelected ? "text-slate-400" : isToday ? "text-accent" : "text-slate-300"
-                      )}>
-                        <span className="sm:inline hidden">{DAYS[date.getDay()]}</span>
-                        <span className="inline sm:hidden">{DAYS[date.getDay()][0]}</span>
-                      </span>
-                      <span className={cn(
-                        'text-xl font-black transition-colors duration-300',
-                        isSelected ? 'text-white' : 'text-slate-700'
-                      )}>
-                        {date.getDate()}
-                      </span>
-                    </div>
-
-                    {/* {daySessions.length > 0 && ( ... )} */}
+                    <span className={cn(
+                      'text-[9px] font-semibold uppercase tracking-wider mb-1.5',
+                      isSelected ? 'text-slate-400' : isToday ? 'text-blue-500' : 'text-slate-400'
+                    )}>
+                      <span className="sm:inline hidden">{DAYS[date.getDay()]}</span>
+                      <span className="sm:hidden">{DAYS[date.getDay()][0]}</span>
+                    </span>
+                    <span className={cn(
+                      'text-sm font-bold leading-none',
+                      isSelected ? 'text-white' : isToday ? 'text-blue-600' : 'text-slate-700'
+                    )}>
+                      {date.getDate()}
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
 
+          {/* Selected Day Sessions */}
           <AnimatePresence mode="wait">
-            {selectedDate && (
+            {selectedDate ? (
               <motion.div
                 key={selectedDate.toISOString()}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                className="border-t border-slate-100/50 px-10 py-12 bg-white/40"
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.25 }}
+                className="p-4"
               >
-                <div className="flex items-end justify-between mb-10">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] mb-3">Daily Ledger</p>
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">
-                      {MONTHS[selectedDate.getMonth()]} {selectedDate.getDate()}
-                      <span className="text-slate-300 ml-2 text-2xl">/ {selectedDate.getFullYear()}</span>
-                    </h3>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.15em]">
+                      {MONTHS[selectedDate.getMonth()]} {selectedDate.getDate()}, {selectedDate.getFullYear()}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">Available trainers</p>
                   </div>
+                  {!isLoadingTrainers && apiSessions.length > 0 && (
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
+                      {apiSessions.length} available
+                    </span>
+                  )}
                 </div>
 
                 {isLoadingTrainers ? (
-                  <div className="flex items-center justify-center p-8 bg-white/50 border border-dashed border-slate-200 rounded-3xl">
-                    <p className="text-sm font-bold text-slate-400">Loading available trainers...</p>
+                  <div className="space-y-2.5">
+                    {[1, 2].map(i => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                        <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-3 bg-slate-100 rounded-full animate-pulse w-32" />
+                          <div className="h-2.5 bg-slate-100 rounded-full animate-pulse w-20" />
+                        </div>
+                        <div className="w-20 h-8 bg-slate-100 rounded-lg animate-pulse" />
+                      </div>
+                    ))}
                   </div>
-                ) : combinedSessions.length === 0 ? (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between p-8 bg-white/50 border border-dashed border-slate-200 rounded-3xl">
-                    <p className="text-sm font-bold text-slate-400">No available sessions for this date.</p>
-                    <Button variant="outline" className="rounded-xl h-10 px-6 font-black text-xs border-slate-200 hover:bg-slate-900 hover:text-white transition-all gap-2">
-                      <Plus className="w-4 h-4" />
-                      Quick Add
+                ) : apiSessions.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center mb-3 border border-dashed border-slate-200">
+                      <Calendar className="w-5 h-5 text-slate-300" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-400 mb-1">No trainers available</p>
+                    <p className="text-xs text-slate-300">Try a different date or browse all trainers.</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/trainers')}
+                      className="mt-4 rounded-xl h-9 px-5 font-semibold text-xs border-slate-200"
+                    >
+                      Browse Trainers
                     </Button>
-                  </motion.div>
+                  </div>
                 ) : (
-                  <div className="grid gap-3">
-                    {combinedSessions.map((s, i) => {
+                  <div className="space-y-2">
+                    {apiSessions.map((s, i) => {
                       const c = COLOR_MAP[s.color];
                       const isExpanded = expandedSessionId === s.id;
 
                       return (
                         <motion.div
                           key={s.id}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: i * 0.06 }}
                           layout
                           className={cn(
-                            "group relative bg-white rounded-[2.5rem] border border-slate-100/50 transition-shadow duration-500",
-                            isExpanded ? "shadow-[0_40px_80px_-24px_rgba(0,0,0,0.12)] ring-1 ring-slate-200" : "hover:shadow-2xl hover:shadow-slate-900/5"
+                            'rounded-xl border transition-all duration-200 overflow-hidden',
+                            isExpanded
+                              ? 'border-slate-200 shadow-md'
+                              : 'border-slate-100 hover:border-slate-200 hover:shadow-sm'
                           )}
                         >
-                          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-t-[2.5rem]" />
-                          <div className="relative p-4 sm:p-6 sm:pl-8 sm:pr-6 z-10">
-                            <div className="flex items-center gap-4 sm:gap-6">
-                              {/* 1. Profile Avatar */}
+                          <div className="flex items-center gap-3 p-3">
+                            <button
+                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                              className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-100 ring-2 ring-white hover:ring-slate-200 transition-all active:scale-95"
+                            >
+                              <img
+                                src={s.trainerAvatar}
+                                alt={s.trainer}
+                                className="w-full h-full object-cover"
+                                onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }}
+                              />
+                            </button>
+
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className={cn('text-[9px] font-semibold px-1.5 py-0.5 rounded border', c.bg, c.text, c.border)}>
+                                  {s.type}
+                                </span>
+                              </div>
                               <button
                                 onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                                className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[1.5rem] overflow-hidden shadow-inner shrink-0 ring-4 ring-slate-50 group-hover:ring-accent/10 transition-all duration-500 active:scale-95 bg-slate-100"
+                                className="text-sm font-semibold text-slate-900 hover:text-slate-600 transition-colors text-left truncate block max-w-full"
                               >
-                                <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover scale-100 group-hover:scale-110 transition-transform duration-700" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }} />
+                                {s.trainer}
                               </button>
-
-                              {/* 2. Trainer Details */}
-                              <div className="min-w-0 flex-1">
-                                <div className="space-y-1 mb-2 font-medium">
-                                  <span className={cn(
-                                    'text-[9px] font-black px-3 py-1 rounded-lg uppercase tracking-[0.15em] border backdrop-blur-sm shadow-sm transition-all duration-500 whitespace-nowrap',
-                                    c.bg, c.text, "border-white"
-                                  )}>
-                                    {s.type}
-                                  </span>
-                                  <button
-                                    onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                                    className="font-black text-slate-900 text-lg sm:text-2xl tracking-tight hover:text-accent transition-all duration-300 text-left block truncate max-w-full"
-                                  >
-                                    {s.trainer}
-                                  </button>
-                                </div>
-                                <div className="flex items-center gap-3 sm:gap-4">
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    <Clock className="w-3.5 h-3.5 text-slate-300" />
-                                    <span className="text-[11px] font-black text-slate-500 uppercase tracking-wide whitespace-nowrap">{s.time}</span>
-                                  </div>
-                                  <div className="w-1 h-1 rounded-full bg-slate-200 flex-shrink-0" />
-                                  <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className="text-[10px] font-black text-accent uppercase tracking-[0.2em] whitespace-nowrap">{s.mode}</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* 3. Action Buttons Group (Book/Join + Expand) */}
-                              <div className="flex items-center gap-3 shrink-0">
-                                {/* Primary Action */}
-                                <div className="hidden sm:block">
-                                  {s.isBooked ? (
-                                    s.mode === 'virtual' ? (
-                                      <button
-                                        onClick={() => navigate(`/session/${s.id}`)}
-                                        className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
-                                      >
-                                        <div className="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
-                                        <Video className="w-4 h-4 relative z-10" />
-                                        <span className="relative z-10 whitespace-nowrap">Join Now</span>
-                                        <div className="absolute top-0 right-0 w-8 h-8 bg-white/10 rounded-full -mr-4 -mt-4 blur-xl" />
-                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-                                      </button>
-                                    ) : (
-                                      <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100">
-                                        <MapPin className="w-4 h-4" />
-                                        On Site
-                                      </div>
-                                    )
-                                  ) : (
-                                    <button
-                                      onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
-                                      className="relative flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg hover:scale-[1.02] active:scale-95 group/btn overflow-hidden"
-                                    >
-                                      <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity rounded-2xl" />
-                                      <Plus className="w-4 h-4 relative z-10" />
-                                      <span className="relative z-10 whitespace-nowrap">Book Now</span>
-                                    </button>
-                                  )}
-                                </div>
-
-                                {/* Expand/collapse chevron */}
-                                <div className="h-10 w-px bg-slate-200/50 hidden sm:block" />
-                                <button
-                                  onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                                  className={cn(
-                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all duration-300 shrink-0",
-                                    isExpanded ? "bg-slate-900 text-white shadow-xl" : "bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 shadow-sm"
-                                  )}
-                                >
-                                  <ChevronDown className={cn("w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-500", isExpanded && "rotate-180")} />
-                                </button>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Clock className="w-3 h-3 text-slate-300" />
+                                <span className="text-[10px] text-slate-400 font-medium">{s.time}</span>
+                                <span className="w-1 h-1 rounded-full bg-slate-200" />
+                                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide">{s.mode}</span>
                               </div>
                             </div>
 
-                            {/* Mobile-only full-width action button */}
-                            <div className="sm:hidden mt-3">
-                              {s.isBooked ? (
-                                s.mode === 'virtual' ? (
-                                  <button
-                                    onClick={() => navigate(`/session/${s.id}`)}
-                                    className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg active:scale-95 group/btn overflow-hidden"
-                                  >
-                                    <Video className="w-4 h-4 relative z-10" />
-                                    <span className="relative z-10">Join Now</span>
-                                  </button>
-                                ) : (
-                                  <div className="flex items-center justify-center gap-2 bg-slate-50 text-slate-400 text-xs font-black h-12 px-6 rounded-xl ring-1 ring-slate-100 w-full">
-                                    <MapPin className="w-4 h-4" />
-                                    On Site
-                                  </div>
-                                )
-                              ) : (
-                                <button
-                                  onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
-                                  className="relative w-full flex items-center justify-center gap-2 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-[13px] font-black h-12 px-6 rounded-2xl transition-all shadow-lg active:scale-95 group/btn overflow-hidden"
-                                >
-                                  <Plus className="w-4 h-4 relative z-10" />
-                                  <span className="relative z-10">Book Now</span>
-                                </button>
-                              )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                onClick={() => navigate(`/book/${s.trainerId}`, {
+                                  state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() }
+                                })}
+                                className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-700 text-white text-[11px] font-semibold h-8 px-3.5 rounded-lg transition-all active:scale-95 whitespace-nowrap"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Book
+                              </button>
+                              <button
+                                onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
+                                className={cn(
+                                  'w-8 h-8 flex items-center justify-center rounded-lg transition-all',
+                                  isExpanded ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                                )}
+                              >
+                                <ChevronDown className={cn('w-4 h-4 transition-transform duration-300', isExpanded && 'rotate-180')} />
+                              </button>
                             </div>
                           </div>
 
@@ -484,33 +418,30 @@ export default function CalendarPage() {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                transition={{ duration: 0.25 }}
+                                className="overflow-hidden"
                               >
-                                <div className="px-6 pb-6 pt-2 border-t border-slate-50">
-                                  <div className="space-y-6">
-                                    <div className="space-y-4">
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] inline-block pb-1 border-b-2 border-accent uppercase">Trainer Expertise</p>
-                                      <p className="text-base text-slate-600 leading-relaxed font-medium max-w-4xl">
-                                        {s.trainerBio}
-                                      </p>
-                                    </div>
-                                    <div className="flex flex-wrap items-center justify-start gap-3">
-                                      <Button
-                                        variant="default"
-                                        onClick={() => navigate(`/book/${s.trainerId}`, { state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() } })}
-                                        className="rounded-2xl text-xs font-black h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all active:scale-95 gap-2 cursor-pointer"
-                                      >
-                                        <Clock className="w-4 h-4" />
-                                        Check Availability
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                                        className="rounded-2xl text-xs font-black h-11 px-6 border-slate-200 hover:bg-slate-900 hover:text-white transition-all active:scale-95 cursor-pointer shadow-sm"
-                                      >
-                                        View Profile
-                                      </Button>
-                                    </div>
+                                <div className="px-4 pb-4 pt-1 border-t border-slate-100 bg-slate-50/50">
+                                  <p className="text-xs text-slate-500 leading-relaxed mb-3">{s.trainerBio}</p>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => navigate(`/book/${s.trainerId}`, {
+                                        state: { trainerName: s.trainer, trainerAvatar: s.trainerAvatar, specialties: [s.type], selectedDate: selectedDate?.toISOString() }
+                                      })}
+                                      className="rounded-lg h-8 px-4 text-xs font-semibold bg-slate-900 hover:bg-slate-800"
+                                    >
+                                      <Clock className="w-3 h-3 mr-1.5" />
+                                      Check Availability
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                                      className="rounded-lg h-8 px-4 text-xs font-semibold border-slate-200"
+                                    >
+                                      View Profile
+                                    </Button>
                                   </div>
                                 </div>
                               </motion.div>
@@ -522,146 +453,171 @@ export default function CalendarPage() {
                   </div>
                 )}
               </motion.div>
+            ) : (
+              <motion.div
+                key="no-date"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center justify-center py-12 text-center"
+              >
+                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
+                  <Calendar className="w-5 h-5 text-slate-300" />
+                </div>
+                <p className="text-sm text-slate-400 font-medium">Select a day to see available trainers</p>
+              </motion.div>
             )}
           </AnimatePresence>
         </motion.div>
 
         {/* Sidebar */}
-        <div className="lg:col-span-5 space-y-5">
+        <div className="lg:col-span-5 space-y-4">
+          {/* Upcoming Schedule */}
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-white/40 shadow-xl p-6 sm:p-8"
+            transition={{ delay: 0.12, duration: 0.4 }}
+            className="bg-white rounded-2xl border border-slate-100 overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-8">
-              <div className="space-y-1">
-                <h3 className="text-[10px] font-black text-accent uppercase tracking-[0.3em]">Your Journal</h3>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight">Upcoming Schedule</h2>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.18em] mb-0.5">Your Journal</p>
+                <h3 className="text-sm font-bold text-slate-900">Upcoming Schedule</h3>
               </div>
-              <div className="flex items-center gap-1.5 bg-slate-900 text-white px-3 py-1.5 rounded-full text-[10px] font-black tracking-widest">
-                {upcomingSessions.length} SESSIONS
-              </div>
+              <span className={cn(
+                'px-2.5 py-1 rounded-full text-[10px] font-semibold',
+                upcomingSessions.length > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400'
+              )}>
+                {isLoadingUpcoming ? '—' : `${upcomingSessions.length} sessions`}
+              </span>
             </div>
-            {upcomingSessions.length === 0 ? (
-              <div className="text-center py-10 px-4">
-                <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
-                  <Calendar className="w-8 h-8 text-slate-200" />
-                </div>
-                <p className="text-slate-400 text-sm font-medium mb-4">No current bookings this month.</p>
-                <Button className="rounded-xl h-10 px-6 font-bold text-sm gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-lg shadow-slate-900/10">
-                  <Plus className="w-4 h-4" />
-                  Explore Slots
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {upcomingSessions.map((s, i) => {
-                  const c = COLOR_MAP[s.color];
-                  const dateLabel = getDateLabel(s.year, s.month, s.day);
-                  const isToday = dateLabel === 'TODAY';
 
-                  return (
-                    <motion.div
-                      key={s.id}
-                      initial={{ opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.15 + i * 0.08 }}
-                      className="group relative p-4 sm:p-5 rounded-[2rem] border border-slate-100 bg-white hover:bg-slate-50/50 transition-all duration-500 hover:shadow-[0_24px_48px_-16px_rgba(0,0,0,0.06)] hover:scale-[1.01] active:scale-[0.99]"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-4 flex-1 min-w-0">
-                          <div className="relative shrink-0">
-                            <div className="absolute inset-0 bg-accent/20 rounded-2xl blur-lg scale-75 group-hover:scale-110 transition-all" />
-                            <button
-                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                              className="w-12 h-12 rounded-[1.2rem] overflow-hidden border-2 border-white relative bg-white transition-all active:scale-95 shrink-0 shadow-sm"
-                            >
-                              <img src={s.trainerAvatar} alt={s.trainer} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }} />
-                            </button>
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5">
-                              <span className={cn(
-                                'text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border',
-                                isToday ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-100"
-                              )}>
-                                {dateLabel}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                {s.mode === 'virtual' && isToday && (
-                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                )}
-                                <span className="text-[10px] font-bold text-slate-400">{s.time}</span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => navigate(`/trainer/${s.trainerId}`)}
-                              className="font-black text-slate-900 text-[13px] tracking-tight hover:text-accent transition-colors text-left block truncate"
-                            >
-                              {s.trainer}
-                            </button>
-                            <p className="text-[10px] text-slate-400 font-bold tracking-tight">{s.type}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex-shrink-0">
-                          {s.mode === 'virtual' ? (
-                            <button
-                              onClick={() => {
-                                const roomId = s.meetingId || s.id;
-                                navigate(`/session/${roomId}`, { 
-                                  state: { 
-                                    bookingId: s.id,
-                                    meetingId: s.meetingId,
-                                    trainerId: s.trainerId,
-                                    clientId: clientId
-                                  } 
-                                });
-                              }}
-                              className="group/join relative flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-[11px] font-black h-9 px-5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95 whitespace-nowrap overflow-hidden"
-                            >
-                              <Video className="w-3.5 h-3.5 relative z-10" />
-                              <span className="relative z-10">Join Now</span>
-                              <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/join:opacity-100 transition-opacity" />
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2 bg-slate-50 text-slate-400 text-[10px] font-black h-9 px-4 rounded-xl border border-slate-100 whitespace-nowrap">
-                              <MapPin className="w-3.5 h-3.5" />
-                              On Site
-                            </div>
-                          )}
-                        </div>
+            <div className="p-4">
+              {isLoadingUpcoming ? (
+                <div className="space-y-2.5">
+                  {[1, 2].map(i => (
+                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 animate-pulse shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <div className="h-3 bg-slate-100 rounded-full animate-pulse w-28" />
+                        <div className="h-2.5 bg-slate-100 rounded-full animate-pulse w-20" />
                       </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
+                      <div className="w-16 h-7 bg-slate-100 rounded-lg animate-pulse" />
+                    </div>
+                  ))}
+                </div>
+              ) : upcomingSessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-3 border border-dashed border-slate-200">
+                    <Calendar className="w-4 h-4 text-slate-300" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-400 mb-1">No upcoming sessions</p>
+                  <p className="text-xs text-slate-300 mb-3">Book a session to get started.</p>
+                  <Button
+                    onClick={() => navigate('/trainers')}
+                    className="rounded-lg h-8 px-4 font-semibold text-xs gap-1.5 bg-slate-900 text-white hover:bg-slate-800"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Explore Trainers
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {upcomingSessions.map((s: any, i: number) => {
+                    const c = COLOR_MAP[s.color];
+                    const dateLabel = getDateLabel(s.year, s.month, s.day);
+                    const isTodayLabel = dateLabel === 'TODAY';
+
+                    return (
+                      <motion.div
+                        key={s.id}
+                        initial={{ opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 + i * 0.07 }}
+                        className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 transition-all group"
+                      >
+                        <button
+                          onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                          className="w-10 h-10 rounded-xl overflow-hidden shrink-0 bg-slate-100 ring-2 ring-white group-hover:ring-slate-100 transition-all active:scale-95"
+                        >
+                          <img
+                            src={s.trainerAvatar}
+                            alt={s.trainer}
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).src = DEFAULT_AVATAR; }}
+                          />
+                        </button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            <span className={cn(
+                              'text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded',
+                              isTodayLabel ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-500'
+                            )}>
+                              {dateLabel}
+                            </span>
+                            {s.mode === 'virtual' && isTodayLabel && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            )}
+                          </div>
+                          <button
+                            onClick={() => navigate(`/trainer/${s.trainerId}`)}
+                            className="text-sm font-semibold text-slate-900 hover:text-slate-600 transition-colors text-left block truncate"
+                          >
+                            {s.trainer}
+                          </button>
+                          <p className="text-[10px] text-slate-400 font-medium">{s.time} · {s.type}</p>
+                        </div>
+
+                        {s.mode === 'virtual' ? (
+                          <button
+                            onClick={() => {
+                              const roomId = s.meetingId || s.id;
+                              navigate(`/session/${roomId}`, {
+                                state: { bookingId: s.id, meetingId: s.meetingId, trainerId: s.trainerId, clientId }
+                              });
+                            }}
+                            className="flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-semibold h-8 px-3 rounded-lg transition-all active:scale-95 whitespace-nowrap shrink-0"
+                          >
+                            <Video className="w-3 h-3" />
+                            Join
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1.5 bg-slate-50 text-slate-400 text-[10px] font-semibold h-8 px-3 rounded-lg border border-slate-100 whitespace-nowrap shrink-0">
+                            <MapPin className="w-3 h-3" />
+                            On Site
+                          </div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </motion.div>
 
+          {/* Progress Card */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15, duration: 0.6 }}
-            className="bg-slate-900 rounded-[2rem] p-8 relative overflow-hidden shadow-2xl shadow-slate-900/30"
+            transition={{ delay: 0.18, duration: 0.4 }}
+            className="bg-slate-900 rounded-2xl p-5 relative overflow-hidden"
           >
-            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 rounded-full blur-[100px] -mr-32 -mt-32" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-400/15 rounded-full blur-[80px] -mr-24 -mt-24 pointer-events-none" />
             <div className="relative z-10">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3">Your Progress</p>
-              <p className="text-white font-black text-4xl tracking-tighter mb-1">
-                {apiUpcomingBookings.length} <span className="text-xl text-slate-500 ml-1">Sessions</span>
-              </p>
-              <p className="text-slate-400 text-xs font-bold mb-8">scheduled in {MONTHS[viewStartDate.getMonth()]}</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'Trainer Sessions', count: apiUpcomingBookings.length, color: 'text-emerald-400', bg: 'bg-emerald-400/10' },
-                ].map(({ label, count, color, bg }) => (
-                  <div key={label} className="bg-white/5 backdrop-blur-md border border-white/5 rounded-2xl p-4 transition-all hover:bg-white/10 group">
-                    <p className={cn('text-2xl font-black mb-1 transition-transform group-hover:scale-110', color)}>{count}</p>
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">{label}</p>
-                  </div>
-                ))}
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.18em] mb-2">Monthly Progress</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <p className="text-white font-bold text-3xl tracking-tight">{apiUpcomingBookings.length}</p>
+                <p className="text-slate-500 text-sm">sessions in {MONTHS[viewStartDate.getMonth()]}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="bg-white/5 border border-white/5 rounded-xl p-3">
+                  <p className="text-emerald-400 text-xl font-bold mb-0.5">{apiUpcomingBookings.length}</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Trainer Sessions</p>
+                </div>
+                <div className="bg-white/5 border border-white/5 rounded-xl p-3">
+                  <p className="text-blue-400 text-xl font-bold mb-0.5">0</p>
+                  <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Completed</p>
+                </div>
               </div>
             </div>
           </motion.div>

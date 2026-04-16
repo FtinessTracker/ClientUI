@@ -17,6 +17,7 @@ import {
   TrendingUp,
   ChevronDown,
   Play,
+  History,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClerk, useUser } from '@clerk/clerk-react';
@@ -276,6 +277,14 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
                       >
                         <User className="w-4 h-4 text-slate-400" />
                         <span className="text-sm font-medium text-slate-700">View Profile</span>
+                      </Link>
+                      <Link
+                        to="/schedule"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <History className="w-4 h-4 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-700">History</span>
                       </Link>
                       <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left">
                         <Settings className="w-4 h-4 text-slate-400" />
