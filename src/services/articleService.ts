@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
 import type { ResearchArticle, ArticleCategory, ArticleSortOption } from '../types/article';
+import { ARTICLES_DATA } from '../data/articles';
 
 interface FetchArticlesParams {
   search?: string;
@@ -12,47 +12,38 @@ export async function fetchArticles({
   category = 'all',
   sort = 'newest',
 }: FetchArticlesParams = {}): Promise<ResearchArticle[]> {
-  let query = supabase
-    .from('research_articles')
-    .select('*')
-    .eq('is_published', true);
+  let results = ARTICLES_DATA.filter(a => a.is_published);
 
   if (category && category !== 'all') {
-    query = query.eq('category', category);
+    results = results.filter(a => a.category === category);
   }
 
   if (search.trim()) {
-    const term = `%${search.trim()}%`;
-    query = query.or(`title.ilike.${term},summary.ilike.${term},author_name.ilike.${term}`);
+    const term = search.trim().toLowerCase();
+    results = results.filter(
+      a =>
+        a.title.toLowerCase().includes(term) ||
+        a.summary.toLowerCase().includes(term) ||
+        a.author_name.toLowerCase().includes(term)
+    );
   }
 
   switch (sort) {
     case 'oldest':
-      query = query.order('published_at', { ascending: true });
+      results.sort((a, b) => new Date(a.published_at).getTime() - new Date(b.published_at).getTime());
       break;
     case 'read_time':
-      query = query.order('read_time_minutes', { ascending: true });
+      results.sort((a, b) => a.read_time_minutes - b.read_time_minutes);
       break;
     case 'newest':
     default:
-      query = query.order('published_at', { ascending: false });
+      results.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
       break;
   }
 
-  const { data, error } = await query;
-
-  if (error) throw error;
-  return (data ?? []) as ResearchArticle[];
+  return results;
 }
 
 export async function fetchArticleById(id: string): Promise<ResearchArticle | null> {
-  const { data, error } = await supabase
-    .from('research_articles')
-    .select('*')
-    .eq('id', id)
-    .eq('is_published', true)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data as ResearchArticle | null;
+  return ARTICLES_DATA.find(a => a.id === id && a.is_published) ?? null;
 }
