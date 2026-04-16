@@ -9,7 +9,7 @@ import ClientLayout from './layouts/ClientLayout';
 import Home from './pages/Home';
 import SignInPage from './pages/auth/SignIn';
 import SignUpPage from './pages/auth/SignUp';
-import TrainerDashboard from './pages/trainer/Dashboard';
+// import TrainerDashboard from './pages/trainer/Dashboard';
 import TrainerOnboarding from './pages/trainer/Onboarding';
 import TrainerSchedule from './pages/trainer/Schedule';
 import TrainerClients from './pages/trainer/Clients';
@@ -160,7 +160,8 @@ function AppRoutes() {
       <Route path="/book/:id" element={<ClientRoute><BookingFlow /></ClientRoute>} />
       <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
-      <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} />
+      {/* <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} /> */}
+      <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerSchedule /></TrainerRoute>} />
       <Route path="/trainer" element={<TrainerSignIn />} />
       <Route path="/trainer/login" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-in" element={<TrainerSignIn />} />
