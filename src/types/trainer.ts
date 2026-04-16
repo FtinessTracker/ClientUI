@@ -109,3 +109,21 @@ export interface SessionNoteRow {
   created_at: string;
   updated_at: string;
 }
+export interface VideoFileRow {
+  id: string;
+  name: string;
+  path: string;
+  s3Url: string;
+  contentType: string;
+  sizeInBytes: number;
+  mediaType: 'VIDEO' | 'AUDIO' | 'IMAGE';
+  resolution?: string;
+  thumbnailUrl?: string | null;
+  visibility: 'PUBLIC' | 'PRIVATE';
+  status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  uploadedBy: string;
+  uploadId?: string | null;
+  durationInSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
+}

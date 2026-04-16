@@ -16,6 +16,7 @@ import TrainerClients from './pages/trainer/Clients';
 import TrainerMessages from './pages/trainer/Messages';
 import TrainerPayments from './pages/trainer/Payments';
 import TrainerProfilePage from './pages/trainer/Profile';
+import LibraryPage from './pages/trainer/Library';
 import TrainerSignIn from './pages/trainer/auth/TrainerSignIn';
 import TrainerSignUp from './pages/trainer/auth/TrainerSignUp';
 import TrainerDiscovery from './pages/client/TrainerDiscovery';
@@ -167,6 +168,7 @@ function AppRoutes() {
       <Route path="/trainer/clients" element={<TrainerRoute allowedRoles={['trainer']}><TrainerClients /></TrainerRoute>} />
       <Route path="/trainer/messages" element={<TrainerRoute allowedRoles={['trainer']}><TrainerMessages /></TrainerRoute>} />
       <Route path="/trainer/payments" element={<TrainerRoute allowedRoles={['trainer']}><TrainerPayments /></TrainerRoute>} />
+      <Route path="/trainer/library" element={<TrainerRoute allowedRoles={['trainer']}><LibraryPage /></TrainerRoute>} />
       <Route path="/trainer/profile" element={<TrainerRoute allowedRoles={['trainer']}><TrainerProfilePage /></TrainerRoute>} />
 
       <Route path="*" element={<Navigate to="/" />} />

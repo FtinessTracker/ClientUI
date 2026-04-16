@@ -16,6 +16,7 @@ import {
   Award,
   TrendingUp,
   ChevronDown,
+  Play,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useClerk, useUser } from '@clerk/clerk-react';
@@ -36,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'My Clients', href: '/trainer/clients', icon: Award, roles: ['trainer'] },
   { label: 'Messages', href: '/trainer/messages', icon: MessageSquare, roles: ['trainer'] },
   { label: 'Payments', href: '/trainer/payments', icon: CreditCard, roles: ['trainer'] },
+  { label: 'Video Library', href: '/trainer/library', icon: Play, roles: ['trainer'] },
   { label: 'My Profile', href: '/trainer/profile', icon: User, roles: ['trainer'] },
   { label: 'My Schedule', href: '/schedule', icon: Calendar, roles: ['client'] },
   { label: 'Messages', href: '/messages', icon: MessageSquare, roles: ['client'] },
