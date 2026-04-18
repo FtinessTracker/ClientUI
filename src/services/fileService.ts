@@ -273,14 +273,28 @@ export const fileService = {
       url += `?status=${status}`;
     }
 
-    const response = await fetch(url);
+    try {
+      const response = await fetch(url);
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ message: 'Failed to fetch uploads' }));
-      throw new Error(error.message || 'Failed to fetch uploads');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error (${response.status}):`, errorText);
+        throw new Error(`Failed to fetch uploads: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Ensure we always return an array
+      if (!Array.isArray(data)) {
+        console.error('API returned non-array response:', data);
+        throw new Error('Invalid response format from server');
+      }
+
+      return data as VideoFile[];
+    } catch (error) {
+      console.error('Error in getUserUploads:', error);
+      throw error;
     }
-
-    return response.json();
   },
 
   /**

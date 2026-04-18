@@ -20,6 +20,34 @@ interface LibraryVideoRequest {
   videoIds: string[];
 }
 
+interface VideoEntryWithExercises {
+  videoId: string;
+  videoName: string;
+  exerciseType: 'REPS' | 'TIME';
+  sets: Array<{
+    setNumber: number;
+    reps?: number | null;
+    durationSeconds?: number | null;
+    restSeconds: number;
+  }>;
+}
+
+interface AddVideosRequest {
+  entries?: VideoEntryWithExercises[];
+  videoIds?: string[];
+}
+
+interface UpdateExerciseRequest {
+  videoId: string;
+  exerciseType: 'REPS' | 'TIME';
+  sets: Array<{
+    setNumber: number;
+    reps?: number | null;
+    durationSeconds?: number | null;
+    restSeconds: number;
+  }>;
+}
+
 interface WorkoutLibrary {
   id: string;
   trainerId: string;
@@ -34,6 +62,17 @@ interface WorkoutLibrary {
   totalVideos: number;
   totalDurationSeconds: number;
   videoIds: string[];
+  videos?: Array<{
+    videoId: string;
+    order: number;
+    exerciseType: 'REPS' | 'TIME';
+    sets: Array<{
+      setNumber: number;
+      reps?: number | null;
+      durationSeconds?: number | null;
+      restSeconds: number;
+    }>;
+  }>;
   agenda: Array<{ order: number; title: string; description: string; videoId: string }>;
   guidelines: string[];
   prerequisites: string[];
@@ -150,18 +189,28 @@ export const libraryService = {
     return handleResponse<WorkoutLibrary>(response);
   },
 
-  // Add videos to library
+  // Add videos to library (supports both entries format with exercises and simple videoIds)
   addVideos: async (
     trainerId: string,
     libraryId: string,
-    videoIds: string[]
+    videoIdsOrEntries: string[] | VideoEntryWithExercises[]
   ): Promise<LibraryVideoResponse> => {
+    // Determine if we have entries or just videoIds
+    const isEntries = Array.isArray(videoIdsOrEntries) && 
+      videoIdsOrEntries.length > 0 && 
+      typeof videoIdsOrEntries[0] === 'object' && 
+      'videoName' in videoIdsOrEntries[0];
+    
+    const requestBody = isEntries
+      ? { entries: videoIdsOrEntries }
+      : { videoIds: videoIdsOrEntries };
+
     const response = await fetch(
       `${API_BASE}/api/library/${trainerId}/${libraryId}/videos`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoIds }),
+        body: JSON.stringify(requestBody),
       }
     );
     return handleResponse<LibraryVideoResponse>(response);
@@ -192,6 +241,23 @@ export const libraryService = {
     );
     return handleResponse<any>(response);
   },
+
+  // Update exercise details for a video in library
+  updateExercise: async (
+    trainerId: string,
+    libraryId: string,
+    request: UpdateExerciseRequest
+  ): Promise<WorkoutLibrary> => {
+    const response = await fetch(
+      `${API_BASE}/api/library/${trainerId}/${libraryId}/exercise`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }
+    );
+    return handleResponse<WorkoutLibrary>(response);
+  },
 };
 
-export type { CreateLibraryRequest, LibrarySummary, WorkoutLibrary, LibraryVideoResponse };
+export type { CreateLibraryRequest, LibrarySummary, WorkoutLibrary, LibraryVideoResponse, UpdateExerciseRequest };

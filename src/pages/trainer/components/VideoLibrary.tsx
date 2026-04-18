@@ -7,6 +7,8 @@ import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { cn, formatDate } from '../../../lib/utils';
+import { useSnackbar } from '../../../components/ui/Snackbar';
+import { useConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { fileService, VideoFile } from '../../../services/fileService';
 
 interface VideoLibraryProps {
@@ -26,23 +28,35 @@ export default function VideoLibrary({
   isDeleting = null,
   userId,
 }: VideoLibraryProps) {
+  const { error: showError, success: showSuccess } = useSnackbar();
+  const { confirm: showConfirm } = useConfirmDialog();
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [editingVideo, setEditingVideo] = useState<VideoFile | null>(null);
   const [editForm, setEditForm] = useState({ name: '', visibility: 'PRIVATE' as const, category: 'GENERAL' });
   const [isUpdating, setIsUpdating] = useState(false);
-  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleDelete = async (videoId: string) => {
-    if (window.confirm('Are you sure you want to delete this video?')) {
-      try {
-        await onDelete?.(videoId);
-      } catch (err) {
-        console.error('Failed to delete video:', err);
-      }
+    const confirmed = await showConfirm({
+      title: 'Delete Video',
+      message: 'Are you sure you want to delete this video? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
+
+    try {
+      await onDelete?.(videoId);
+      showSuccess('Video deleted successfully');
+    } catch (err) {
+      console.error('Failed to delete video:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete video';
+      showError(errorMsg);
     }
   };
 
@@ -53,7 +67,6 @@ export default function VideoLibrary({
       visibility: video.visibility as 'PUBLIC' | 'PRIVATE',
       category: video.category || 'GENERAL',
     });
-    setUpdateMessage(null);
   };
 
   const handleUpdateVideo = async () => {
@@ -67,15 +80,14 @@ export default function VideoLibrary({
         category: editForm.category as any,
       });
 
-      setUpdateMessage({ type: 'success', text: 'Video updated successfully!' });
+      showSuccess('Video updated successfully');
       setTimeout(() => {
         setEditingVideo(null);
-        setUpdateMessage(null);
         onUpdate?.(editingVideo.id, editForm);
-      }, 1500);
+      }, 1000);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to update video';
-      setUpdateMessage({ type: 'error', text: errorMsg });
+      showError(errorMsg);
     } finally {
       setIsUpdating(false);
     }
@@ -630,35 +642,6 @@ export default function VideoLibrary({
 
                 {/* Content */}
                 <div className="p-7 space-y-5">
-                  {/* Message */}
-                  {updateMessage && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={cn(
-                        'flex items-center gap-3 p-4 rounded-xl',
-                        updateMessage.type === 'success'
-                          ? 'bg-emerald-50 border border-emerald-200'
-                          : 'bg-red-50 border border-red-200'
-                      )}
-                    >
-                      {updateMessage.type === 'success' ? (
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-                      )}
-                      <p
-                        className={cn(
-                          'text-sm font-bold',
-                          updateMessage.type === 'success'
-                            ? 'text-emerald-700'
-                            : 'text-red-700'
-                        )}
-                      >
-                        {updateMessage.text}
-                      </p>
-                    </motion.div>
-                  )}
 
                   {/* Video Name */}
                   <div>

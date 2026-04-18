@@ -19,8 +19,10 @@ import {
 import { libraryService, WorkoutLibrary } from '../../services/libraryService';
 import { fileService, VideoFile } from '../../services/fileService';
 import { formatDate, formatPrice } from '../../lib/utils';
+import { useSnackbar } from '../ui/Snackbar';
+import { useConfirmDialog } from '../ui/ConfirmDialog';
 import { LibraryCreationForm } from './LibraryCreationForm';
-import { VideoSelector } from './VideoSelector';
+import { AddVideosWithExercisesModal } from './AddVideosWithExercisesModal';
 import { WorkoutPlanDetail } from './WorkoutPlanDetail';
 
 
@@ -137,13 +139,13 @@ function CardMenu({
 }
 
 export function LibraryManagement({ trainerId, trainerName, videos: initialVideos }: { trainerId: string; trainerName: string; videos?: VideoFile[] }) {
+  const { error: showError, success: showSuccess } = useSnackbar();
+  const { confirm: showConfirm } = useConfirmDialog();
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [displayMode, setDisplayMode] = useState<DisplayMode>('grid');
   const [libraries, setLibraries] = useState<WorkoutLibrary[]>([]);
   const [filteredLibraries, setFilteredLibraries] = useState<WorkoutLibrary[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
-  const [successMessage, setSuccessMessage] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedLibrary, setSelectedLibrary] = useState<WorkoutLibrary | null>(null);
@@ -188,9 +190,8 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
       // If not set, API returns all non-archived by default
       const data = await libraryService.getLibraries(trainerId, statusFilter || undefined);
       setLibraries(data);
-      setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load libraries');
+      showError(err instanceof Error ? err.message : 'Failed to load libraries');
     } finally {
       setLoading(false);
     }
@@ -204,27 +205,31 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
       setAllVideos(videos);
     } catch (err) {
       console.error('Failed to fetch videos:', err);
-      setError('Failed to load trainer videos');
+      showError('Failed to load trainer videos');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddVideos = async (videoIds: string[]) => {
+  const handleAddVideos = async (entries: Array<{
+    videoId: string;
+    videoName: string;
+    exerciseType: 'REPS' | 'TIME';
+    sets: Array<{ setNumber: number; reps?: number | null; durationSeconds?: number | null; restSeconds: number }>;
+  }>) => {
     if (!selectedLibrary) return;
 
     setLoading(true);
     try {
-      await libraryService.addVideos(trainerId, selectedLibrary.id, videoIds);
-      setSuccessMessage(`Added ${videoIds.length} video(s) to ${selectedLibrary.name}`);
+      // Add videos to library with entries format (includes exercise details)
+      await libraryService.addVideos(trainerId, selectedLibrary.id, entries);
+
+      showSuccess(`Added ${entries.length} video(s) with exercise details to ${selectedLibrary.name}`);
       fetchLibraries();
       setViewMode('list');
       setSelectedLibrary(null);
-
-      // Clear message after 3 seconds
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add videos');
+      showError(err instanceof Error ? err.message : 'Failed to add videos');
     } finally {
       setLoading(false);
     }
@@ -232,18 +237,17 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
 
   const handlePublish = async (library: WorkoutLibrary) => {
     if (library.totalVideos === 0) {
-      setError('Cannot publish library without videos');
+      showError('Cannot publish library without videos');
       return;
     }
 
     setLoading(true);
     try {
       await libraryService.updateStatus(trainerId, library.id, 'PUBLISHED');
-      setSuccessMessage(`${library.name} published successfully`);
+      showSuccess(`${library.name} published successfully`);
       fetchLibraries();
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to publish library');
+      showError(err instanceof Error ? err.message : 'Failed to publish library');
     } finally {
       setLoading(false);
     }
@@ -253,27 +257,33 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
     setLoading(true);
     try {
       await libraryService.updateStatus(trainerId, library.id, 'ARCHIVED');
-      setSuccessMessage(`${library.name} archived`);
+      showSuccess(`${library.name} archived`);
       fetchLibraries();
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to archive library');
+      showError(err instanceof Error ? err.message : 'Failed to archive library');
     } finally {
       setLoading(false);
     }
   };
 
   const handleDeleteLibrary = async (library: WorkoutLibrary) => {
-    if (!confirm(`Are you sure you want to delete "${library.name}"?`)) return;
+    const confirmed = await showConfirm({
+      title: 'Delete Library',
+      message: `Are you sure you want to delete "${library.name}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      isDangerous: true,
+    });
+
+    if (!confirmed) return;
 
     setLoading(true);
     try {
       await libraryService.deleteLibrary(trainerId, library.id);
-      setSuccessMessage(`${library.name} deleted`);
+      showSuccess(`${library.name} deleted`);
       fetchLibraries();
-      setTimeout(() => setSuccessMessage(''), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete library');
+      showError(err instanceof Error ? err.message : 'Failed to delete library');
     } finally {
       setLoading(false);
     }
@@ -292,42 +302,6 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
         animate={{ opacity: 1 }}
         className="w-full space-y-8"
       >
-
-        {/* Error Alert */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex items-start gap-3 rounded-lg bg-red-50 p-4"
-            >
-              <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-red-900">Error</p>
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
-              <button onClick={() => setError('')} className="text-red-600 hover:text-red-700">
-                <X className="h-5 w-5" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Success Alert */}
-        <AnimatePresence>
-          {successMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="flex items-start gap-3 rounded-lg bg-green-50 p-4"
-            >
-              <CheckCircle className="h-5 w-5 flex-shrink-0 text-green-600 mt-0.5" />
-              <p className="text-sm text-green-700">{successMessage}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Section 1: Your Created Libraries */}
         <div className="space-y-0">
@@ -579,11 +553,10 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
           trainerName={trainerName}
           editingLibrary={selectedLibrary || undefined}
           onSuccess={() => {
-            setSuccessMessage(selectedLibrary ? 'Library updated successfully!' : 'Library created successfully!');
+            showSuccess(selectedLibrary ? 'Library updated successfully!' : 'Library created successfully!');
             setViewMode('list');
             setSelectedLibrary(null);
             fetchLibraries();
-            setTimeout(() => setSuccessMessage(''), 3000);
           }}
           onCancel={() => {
             setViewMode('list');
@@ -594,14 +567,14 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
     );
   }
 
-  // View: Video Selector
+  // View: Add Videos with Exercises
   if (viewMode === 'videoselector' && selectedLibrary) {
     return (
-      <VideoSelector
+      <AddVideosWithExercisesModal
         videos={allVideos}
         loading={loading}
         existingVideoIds={selectedLibrary.videoIds || []}
-        onSelect={handleAddVideos}
+        onAddVideos={handleAddVideos}
         onCancel={() => {
           setViewMode('list');
           setSelectedLibrary(null);

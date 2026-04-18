@@ -19,7 +19,8 @@ import {
 import { WorkoutLibrary, libraryService } from '../../services/libraryService';
 import { fileService, VideoInfo, VideoFile } from '../../services/fileService';
 import { formatDate, formatPrice } from '../../lib/utils';
-import { VideoSelector } from './VideoSelector';
+import { AddVideosWithExercisesModal } from './AddVideosWithExercisesModal';
+import { useSnackbar } from '../ui/Snackbar';
 
 interface WorkoutPlanDetailProps {
   library: WorkoutLibrary;
@@ -42,6 +43,7 @@ export function WorkoutPlanDetail({
   onClose,
   isLoading = false,
 }: WorkoutPlanDetailProps) {
+  const { showSuccess, showError } = useSnackbar();
   const [videoDetails, setVideoDetails] = useState<Map<string, VideoInfo>>(new Map());
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [deletingVideoId, setDeletingVideoId] = useState<string | null>(null);
@@ -50,6 +52,10 @@ export function WorkoutPlanDetail({
   const [availableVideos, setAvailableVideos] = useState<VideoInfo[]>([]);
   const [selectedVideoIds, setSelectedVideoIds] = useState<string[]>([]);
   const [addingVideos, setAddingVideos] = useState(false);
+  const [editingVideoId, setEditingVideoId] = useState<string | null>(null);
+  const [editingExerciseType, setEditingExerciseType] = useState<'REPS' | 'TIME'>('REPS');
+  const [editingSets, setEditingSets] = useState<Array<{ setNumber: number; reps?: number | null; durationSeconds?: number | null; restSeconds: number }>>([]);
+  const [updatingExerciseId, setUpdatingExerciseId] = useState<string | null>(null);
 
   // Sync currentLibrary when prop changes
   useEffect(() => {
@@ -99,13 +105,75 @@ export function WorkoutPlanDetail({
       const updatedLibrary = await libraryService.removeVideos(trainerId, currentLibrary.id, [videoId]);
       // Update local state only, don't trigger onArchive
       setCurrentLibrary(updatedLibrary);
-      alert('Video removed from plan successfully');
+      showSuccess('Video removed from plan successfully');
     } catch (err) {
       console.error('Failed to remove video from plan:', err);
-      alert('Failed to remove video. Please try again.');
+      showError('Failed to remove video. Please try again.');
     } finally {
       setDeletingVideoId(null);
     }
+  };
+
+  // Handle opening edit exercise modal
+  const handleEditExercise = (videoId: string) => {
+    const videoData = currentLibrary.videos?.find(v => v.videoId === videoId);
+    if (!videoData) return;
+    
+    setEditingVideoId(videoId);
+    setEditingExerciseType(videoData.exerciseType);
+    setEditingSets(videoData.sets.map(s => ({ ...s })));
+  };
+
+  // Handle updating exercise sets
+  const handleUpdateExercise = async () => {
+    if (!editingVideoId) return;
+
+    setUpdatingExerciseId(editingVideoId);
+    try {
+      const updated = await libraryService.updateExercise(trainerId, currentLibrary.id, {
+        videoId: editingVideoId,
+        exerciseType: editingExerciseType,
+        sets: editingSets,
+      });
+      setCurrentLibrary(updated);
+      setEditingVideoId(null);
+      showSuccess('Exercise details updated successfully');
+    } catch (err) {
+      console.error('Failed to update exercise:', err);
+      showError('Failed to update exercise. Please try again.');
+    } finally {
+      setUpdatingExerciseId(null);
+    }
+  };
+
+  // Handle updating set value
+  const handleUpdateSet = (index: number, field: string, value: any) => {
+    const newSets = [...editingSets];
+    newSets[index] = { ...newSets[index], [field]: value === '' ? null : value };
+    setEditingSets(newSets);
+  };
+
+  // Handle deleting a set
+  const handleDeleteSet = (index: number) => {
+    const newSets = editingSets.filter((_, i) => i !== index);
+    // Recalculate set numbers to maintain sequence
+    const recalculatedSets = newSets.map((set, i) => ({
+      ...set,
+      setNumber: i + 1,
+    }));
+    setEditingSets(recalculatedSets);
+  };
+
+  // Handle adding a new set
+  const handleAddSet = () => {
+    const newSetNumber = editingSets.length + 1;
+    const newSet = {
+      setNumber: newSetNumber,
+      reps: editingExerciseType === 'REPS' ? 10 : null,
+      durationSeconds: editingExerciseType === 'TIME' ? 30 : null,
+      restSeconds: 30,
+    };
+    setEditingSets([...editingSets, newSet]);
   };
 
   // Handle update video metadata
@@ -114,21 +182,32 @@ export function WorkoutPlanDetail({
     const newMap = new Map(videoDetails);
     newMap.set(updatedVideo.id, updatedVideo);
     setVideoDetails(newMap);
-    alert('Video metadata updated successfully');
+    showSuccess('Video metadata updated successfully');
   };
 
   // Fetch available videos for adding to library
   const handleShowAddVideos = async () => {
     try {
-      const allVideos = await fileService.getUserUploads(trainerId);
-      // Filter out videos already in the library
-      const available = allVideos.filter(v => !currentLibrary.videoIds.includes(v.id));
+      // Fetch only completed videos
+      const allVideos = await fileService.getUserUploads(trainerId, 'COMPLETED');
+      
+      if (!allVideos || allVideos.length === 0) {
+        showError('No videos available. Please upload some videos first');
+        return;
+      }
+
+      // Filter out videos already in the library (check both videoIds and videos array)
+      const existingVideoIds = new Set([
+        ...(currentLibrary.videoIds || []),
+        ...(currentLibrary.videos?.map(v => v.videoId) || [])
+      ]);
+      const available = allVideos.filter(v => !existingVideoIds.has(v.id));
       setAvailableVideos(available);
       setShowAddVideos(true);
       setSelectedVideoIds([]);
     } catch (err) {
       console.error('Failed to fetch available videos:', err);
-      alert('Failed to load available videos. Please try again.');
+      showError('Failed to load available videos. Please try again.');
     }
   };
 
@@ -259,7 +338,7 @@ export function WorkoutPlanDetail({
           </div>
 
           {/* Videos List */}
-          {currentLibrary.videoIds && currentLibrary.videoIds.length > 0 && (
+          {(currentLibrary.videos && currentLibrary.videos.length > 0) || (currentLibrary.videoIds && currentLibrary.videoIds.length > 0) ? (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -282,15 +361,20 @@ export function WorkoutPlanDetail({
               )}
 
               <div className="space-y-4">
-                {currentLibrary.videoIds.map((videoId, idx) => {
-                  const videoInfo = videoDetails.get(videoId);
+                {(currentLibrary.videos && currentLibrary.videos.length > 0 ? currentLibrary.videos : currentLibrary.videoIds?.map((videoId, idx) => ({
+                  videoId,
+                  order: idx + 1,
+                  exerciseType: 'REPS' as const,
+                  sets: []
+                })) || []).map((video, idx) => {
+                  const videoInfo = videoDetails.get(video.videoId);
                   const duration = videoInfo?.durationInSeconds
                     ? fileService.formatDuration(videoInfo.durationInSeconds)
                     : 'N/A';
 
                   return (
                     <div
-                      key={videoId}
+                      key={video.videoId}
                       className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition flex gap-4 bg-white"
                     >
                       {/* Video Screen with Play Button */}
@@ -337,7 +421,7 @@ export function WorkoutPlanDetail({
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">ID: {videoId}</p>
+                            <p className="text-xs text-gray-500 mt-1">ID: {video.videoId}</p>
                             
                             {videoInfo && (
                               <div className="flex flex-wrap gap-3 mt-3 text-sm">
@@ -357,16 +441,59 @@ export function WorkoutPlanDetail({
                                 )}
                               </div>
                             )}
+
+                            {/* Exercise Sets Details - Display if available */}
+                            {video.sets && video.sets.length > 0 && (
+                              <div className="mt-4 space-y-3 bg-blue-50 rounded-lg p-4 border border-blue-100">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">
+                                    {video.exerciseType === 'REPS' ? '💪 Reps' : '⏱️ Time-Based'}
+                                  </span>
+                                  <button
+                                    onClick={() => handleEditExercise(video.videoId)}
+                                    disabled={updatingExerciseId === video.videoId}
+                                    className="p-1.5 hover:bg-blue-200 rounded transition text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                                    title="Edit exercise sets"
+                                  >
+                                    {updatingExerciseId === video.videoId ? (
+                                      <Loader className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <Edit className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  {video.sets.map((set, setIdx) => (
+                                    <div key={setIdx} className="flex items-center justify-between text-sm bg-white rounded p-2.5">
+                                      <span className="font-semibold text-gray-700">Set {set.setNumber}</span>
+                                      <div className="flex items-center gap-3 text-gray-600">
+                                        {video.exerciseType === 'REPS' && set.reps !== null && set.reps !== undefined ? (
+                                          <span className="font-medium">{set.reps} reps</span>
+                                        ) : video.exerciseType === 'TIME' && set.durationSeconds ? (
+                                          <span className="font-medium">{set.durationSeconds}s</span>
+                                        ) : null}
+                                        {set.restSeconds && (
+                                          <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-700 rounded">
+                                            Rest: {set.restSeconds}s
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Delete Button */}
                           <button
-                            onClick={() => handleDeleteVideo(videoId)}
-                            disabled={deletingVideoId === videoId || (videoInfo && !videoInfo.active)}
+                            onClick={() => handleDeleteVideo(video.videoId)}
+                            disabled={deletingVideoId === video.videoId || (videoInfo && !videoInfo.active)}
                             className="flex-shrink-0 p-2 hover:bg-red-50 rounded-lg transition text-red-600 hover:text-red-700 disabled:opacity-50 disabled:hover:bg-transparent"
                             title={videoInfo && !videoInfo.active ? 'Cannot delete inactive videos' : 'Remove video from plan'}
                           >
-                            {deletingVideoId === videoId ? (
+                            {deletingVideoId === video.videoId ? (
                               <Loader className="h-5 w-5 animate-spin" />
                             ) : (
                               <Trash2 className="h-5 w-5" />
@@ -379,10 +506,7 @@ export function WorkoutPlanDetail({
                 })}
               </div>
             </div>
-          )}
-
-          {/* No Videos Section */}
-          {(!currentLibrary.videoIds || currentLibrary.videoIds.length === 0) && (
+          ) : (
             <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
               <Play className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Videos Added Yet</h3>
@@ -396,21 +520,23 @@ export function WorkoutPlanDetail({
             </div>
           )}
 
-          {/* Add Videos Modal - Using VideoSelector */}
+          {/* Add Videos Modal - Using AddVideosWithExercisesModal */}
           <AnimatePresence>
             {showAddVideos && (
-              <VideoSelector
+              <AddVideosWithExercisesModal
                 videos={availableVideos as VideoFile[]}
-                onSelect={async (videoIds) => {
+                onAddVideos={async (entries) => {
                   setAddingVideos(true);
                   try {
-                    await libraryService.addVideos(trainerId, currentLibrary.id, videoIds);
+                    await libraryService.addVideos(trainerId, currentLibrary.id, entries);
                     const updated = await libraryService.getLibrary(trainerId, currentLibrary.id);
                     setCurrentLibrary(updated);
                     setShowAddVideos(false);
                     setSelectedVideoIds([]);
+                    showSuccess('Videos added successfully with exercise configuration!');
                   } catch (error) {
                     console.error('Failed to add videos:', error);
+                    showError('Failed to add videos. Please try again.');
                   } finally {
                     setAddingVideos(false);
                   }
@@ -420,9 +546,168 @@ export function WorkoutPlanDetail({
                   setSelectedVideoIds([]);
                 }}
                 loading={addingVideos}
-                selectedVideoIds={selectedVideoIds}
-                existingVideoIds={currentLibrary.videoIds || []}
+                existingVideoIds={[...(currentLibrary.videoIds || []), ...(currentLibrary.videos?.map(v => v.videoId) || [])]}
               />
+            )}
+
+            {/* Edit Exercise Sets Modal */}
+            {editingVideoId && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+                onClick={() => setEditingVideoId(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-bold text-gray-900">Edit Exercise Sets</h2>
+                    <button
+                      onClick={() => setEditingVideoId(null)}
+                      className="p-1 hover:bg-gray-100 rounded-lg transition"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-6">
+                    {/* Exercise Type Selection */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        Exercise Type
+                      </label>
+                      <div className="flex gap-4">
+                        {(['REPS', 'TIME'] as const).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setEditingExerciseType(type)}
+                            className={`flex-1 py-3 px-4 rounded-lg font-medium transition ${
+                              editingExerciseType === type
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {type === 'REPS' ? '💪 Reps-Based' : '⏱️ Time-Based'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Sets Configuration */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-900 mb-3">
+                        Sets
+                      </label>
+                      
+                      {/* Sets Table */}
+                      <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="bg-gray-50 border-b border-gray-200">
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Set</th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">
+                                {editingExerciseType === 'REPS' ? 'Reps' : 'Duration (sec)'}
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700">Rest (sec)</th>
+                              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 w-12">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {editingSets.map((set, idx) => (
+                              <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                                <td className="px-4 py-3">
+                                  <span className="text-sm font-semibold text-gray-900">{set.setNumber}</span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={
+                                      editingExerciseType === 'REPS'
+                                        ? set.reps ?? ''
+                                        : set.durationSeconds ?? ''
+                                    }
+                                    onChange={(e) =>
+                                      handleUpdateSet(
+                                        idx,
+                                        editingExerciseType === 'REPS' ? 'reps' : 'durationSeconds',
+                                        e.target.value ? parseInt(e.target.value) : null
+                                      )
+                                    }
+                                    placeholder={editingExerciseType === 'REPS' ? 'Reps' : 'Seconds'}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-3">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={set.restSeconds}
+                                    onChange={(e) =>
+                                      handleUpdateSet(idx, 'restSeconds', e.target.value ? parseInt(e.target.value) : 0)
+                                    }
+                                    placeholder="Rest"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {editingSets.length > 1 && (
+                                    <button
+                                      onClick={() => handleDeleteSet(idx)}
+                                      className="p-2 hover:bg-red-50 rounded transition text-red-600 hover:text-red-700 inline-flex"
+                                      title="Delete this set"
+                                    >
+                                      <Trash2 className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Add Set Button */}
+                      <button
+                        onClick={handleAddSet}
+                        className="mt-4 w-full py-2 px-4 border-2 border-dashed border-blue-300 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium flex items-center justify-center gap-2"
+                      >
+                        + Add Set
+                      </button>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        onClick={() => setEditingVideoId(null)}
+                        className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleUpdateExercise}
+                        disabled={updatingExerciseId === editingVideoId}
+                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {updatingExerciseId === editingVideoId ? (
+                          <>
+                            <Loader className="h-4 w-4 animate-spin" />
+                            Updating...
+                          </>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
 

@@ -32,6 +32,8 @@ import ProductsPage from './pages/client/ProductsPage';
 import ResearchArticles from './pages/client/ResearchArticles';
 import SessionRoom from './pages/shared/SessionRoom';
 import { useAppUser } from './hooks/useAppUser';
+import { SnackbarProvider } from './components/ui/Snackbar';
+import { ConfirmDialogProvider } from './components/ui/ConfirmDialog';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -208,16 +210,24 @@ export default function App() {
   if (!hasClerk) {
     return (
       <QueryClientProvider client={queryClient}>
-        <NoClerkApp />
+        <SnackbarProvider>
+          <ConfirmDialogProvider>
+            <NoClerkApp />
+          </ConfirmDialogProvider>
+        </SnackbarProvider>
       </QueryClientProvider>
     );
   }
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <SnackbarProvider>
+        <ConfirmDialogProvider>
+          <Router>
+            <AppRoutes />
+          </Router>
+        </ConfirmDialogProvider>
+      </SnackbarProvider>
     </QueryClientProvider>
   );
 }
