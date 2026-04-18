@@ -12,6 +12,14 @@ export interface FileMetadata {
   durationInSeconds?: number;
   visibility?: 'PUBLIC' | 'PRIVATE';
   category?: string;
+  exerciseName?: string;
+  muscleGroups?: Array<'CHEST' | 'TRICEPS' | 'QUADS' | 'GLUTES' | 'HAMSTRINGS' | 'BACK' | 'BICEPS' | 'SHOULDERS' | 'CORE' | 'CALVES' | 'HIP_GROIN' | 'FOREARMS' | 'FULL_BODY'>;
+  movementPattern?: 'PUSH' | 'PULL' | 'SQUAT' | 'HINGE' | 'LUNGE' | 'CARRY' | 'ROTATION' | 'FULL_BODY' | 'CARDIO' | 'ISOMETRIC';
+  modality?: 'STRENGTH' | 'MOBILITY' | 'FLEXIBILITY' | 'CARDIO' | 'PLYOMETRIC' | 'BALANCE' | 'ENDURANCE' | 'REHAB';
+  exerciseType?: 'REPS' | 'TIMED';
+  instructions?: string[];
+  equipment?: Array<'DUMBBELL' | 'BARBELL' | 'KETTLEBELL' | 'RESISTANCE_BAND' | 'CABLE' | 'MACHINE' | 'BODYWEIGHT' | 'FOAM_ROLLER' | 'MEDICINE_BALL'>;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 }
 
 export interface UploadUrlResponse {
@@ -33,6 +41,14 @@ export interface CompleteUploadRequest {
   actualSizeInBytes?: number;
   durationInSeconds?: number;
   resolution?: string;
+  exerciseName?: string;
+  muscleGroups?: Array<'CHEST' | 'TRICEPS' | 'QUADS' | 'GLUTES' | 'HAMSTRINGS' | 'BACK' | 'BICEPS' | 'SHOULDERS' | 'CORE' | 'CALVES' | 'HIP_GROIN' | 'FOREARMS' | 'FULL_BODY'>;
+  movementPattern?: 'PUSH' | 'PULL' | 'SQUAT' | 'HINGE' | 'LUNGE' | 'CARRY' | 'ROTATION' | 'FULL_BODY' | 'CARDIO' | 'ISOMETRIC';
+  modality?: 'STRENGTH' | 'MOBILITY' | 'FLEXIBILITY' | 'CARDIO' | 'PLYOMETRIC' | 'BALANCE' | 'ENDURANCE' | 'REHAB';
+  exerciseType?: 'REPS' | 'TIMED';
+  instructions?: string[];
+  equipment?: Array<'DUMBBELL' | 'BARBELL' | 'KETTLEBELL' | 'RESISTANCE_BAND' | 'CABLE' | 'MACHINE' | 'BODYWEIGHT' | 'FOAM_ROLLER' | 'MEDICINE_BALL'>;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 }
 
 export interface VideoFile {
@@ -47,11 +63,19 @@ export interface VideoFile {
   thumbnailUrl?: string;
   visibility: 'PUBLIC' | 'PRIVATE';
   status: 'PENDING' | 'COMPLETED' | 'FAILED';
-  category?: string; // Video category (YOGA, HIIT, STRENGTH, CARDIO, STRETCHING, NUTRITION, MEDITATION, GENERAL, OTHER)
+  category?: string;
   uploadedBy: string;
   uploadId?: string;
   durationInSeconds?: number;
   createdAt: string;
+  exerciseName?: string;
+  muscleGroups?: Array<'CHEST' | 'TRICEPS' | 'QUADS' | 'GLUTES' | 'HAMSTRINGS' | 'BACK' | 'BICEPS' | 'SHOULDERS' | 'CORE' | 'CALVES' | 'HIP_GROIN' | 'FOREARMS' | 'FULL_BODY'>;
+  movementPattern?: 'PUSH' | 'PULL' | 'SQUAT' | 'HINGE' | 'LUNGE' | 'CARRY' | 'ROTATION' | 'FULL_BODY' | 'CARDIO' | 'ISOMETRIC';
+  modality?: 'STRENGTH' | 'MOBILITY' | 'FLEXIBILITY' | 'CARDIO' | 'PLYOMETRIC' | 'BALANCE' | 'ENDURANCE' | 'REHAB';
+  exerciseType?: 'REPS' | 'TIMED';
+  instructions?: string[];
+  equipment?: Array<'DUMBBELL' | 'BARBELL' | 'KETTLEBELL' | 'RESISTANCE_BAND' | 'CABLE' | 'MACHINE' | 'BODYWEIGHT' | 'FOAM_ROLLER' | 'MEDICINE_BALL'>;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
   updatedAt: string;
 }
 
@@ -62,8 +86,17 @@ export interface VideoInfo {
   url: string;
   thumbnailUrl?: string | null;
   category?: string;
+  resolution?: string;
   active: boolean;
   uploadedAt?: string;
+  exerciseName?: string;
+  muscleGroups?: Array<'CHEST' | 'TRICEPS' | 'QUADS' | 'GLUTES' | 'HAMSTRINGS' | 'BACK' | 'BICEPS' | 'SHOULDERS' | 'CORE' | 'CALVES' | 'HIP_GROIN' | 'FOREARMS' | 'FULL_BODY'>;
+  movementPattern?: 'PUSH' | 'PULL' | 'SQUAT' | 'HINGE' | 'LUNGE' | 'CARRY' | 'ROTATION' | 'FULL_BODY' | 'CARDIO' | 'ISOMETRIC';
+  modality?: 'STRENGTH' | 'MOBILITY' | 'FLEXIBILITY' | 'CARDIO' | 'PLYOMETRIC' | 'BALANCE' | 'ENDURANCE' | 'REHAB';
+  exerciseType?: 'REPS' | 'TIMED';
+  instructions?: string[];
+  equipment?: Array<'DUMBBELL' | 'BARBELL' | 'KETTLEBELL' | 'RESISTANCE_BAND' | 'CABLE' | 'MACHINE' | 'BODYWEIGHT' | 'FOAM_ROLLER' | 'MEDICINE_BALL'>;
+  difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 }
 
 export const fileService = {
@@ -325,6 +358,14 @@ export const fileService = {
       name?: string;
       visibility?: 'PUBLIC' | 'PRIVATE';
       category?: 'YOGA' | 'HIIT' | 'STRENGTH' | 'CARDIO' | 'STRETCHING' | 'NUTRITION' | 'MEDITATION' | 'GENERAL' | 'OTHER';
+      exerciseName?: string;
+      muscleGroups?: Array<'CHEST' | 'TRICEPS' | 'QUADS' | 'GLUTES' | 'HAMSTRINGS' | 'BACK' | 'BICEPS' | 'SHOULDERS' | 'CORE' | 'CALVES' | 'HIP_GROIN' | 'FOREARMS' | 'FULL_BODY'>;
+      movementPattern?: 'PUSH' | 'PULL' | 'SQUAT' | 'HINGE' | 'LUNGE' | 'CARRY' | 'ROTATION' | 'FULL_BODY' | 'CARDIO' | 'ISOMETRIC';
+      modality?: 'STRENGTH' | 'MOBILITY' | 'FLEXIBILITY' | 'CARDIO' | 'PLYOMETRIC' | 'BALANCE' | 'ENDURANCE' | 'REHAB';
+      exerciseType?: 'REPS' | 'TIMED';
+      instructions?: string[];
+      equipment?: Array<'DUMBBELL' | 'BARBELL' | 'KETTLEBELL' | 'RESISTANCE_BAND' | 'CABLE' | 'MACHINE' | 'BODYWEIGHT' | 'FOAM_ROLLER' | 'MEDICINE_BALL'>;
+      difficulty?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
     }
   ): Promise<VideoFile> {
     const response = await fetch(`${API_URL}/${userId}/video/${videoId}`, {

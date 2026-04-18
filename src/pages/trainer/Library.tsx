@@ -48,6 +48,26 @@ export default function LibraryPage() {
       setUploadSuccess(false);
 
       try {
+        // Log metadata being sent
+        console.log('Upload metadata:', {
+          fileName: metadata.fileName,
+          contentType: metadata.contentType,
+          size: metadata.size,
+          mediaType: metadata.mediaType,
+          resolution: metadata.resolution,
+          durationInSeconds: metadata.durationInSeconds,
+          visibility: metadata.visibility,
+          category: metadata.category,
+          exerciseName: metadata.exerciseName,
+          muscleGroups: metadata.muscleGroups,
+          movementPattern: metadata.movementPattern,
+          modality: metadata.modality,
+          exerciseType: metadata.exerciseType,
+          instructions: metadata.instructions,
+          equipment: metadata.equipment,
+          difficulty: metadata.difficulty,
+        });
+
         // Step 1: Get upload URL from backend
         const uploadResponse: UploadUrlResponse = await fileService.getUploadUrl(user.id, {
           fileName: metadata.fileName,
@@ -58,6 +78,14 @@ export default function LibraryPage() {
           durationInSeconds: metadata.durationInSeconds,
           visibility: metadata.visibility,
           category: metadata.category,
+          exerciseName: metadata.exerciseName,
+          muscleGroups: metadata.muscleGroups,
+          movementPattern: metadata.movementPattern,
+          modality: metadata.modality,
+          exerciseType: metadata.exerciseType,
+          instructions: metadata.instructions,
+          equipment: metadata.equipment,
+          difficulty: metadata.difficulty,
         });
 
         const fileId = uploadResponse.fileId;
@@ -95,12 +123,32 @@ export default function LibraryPage() {
         }
 
         // Step 3: Complete upload
-        console.log('Completing upload...');
+        console.log('Completing upload with metadata:', {
+          fileId,
+          durationInSeconds: metadata.durationInSeconds,
+          resolution: metadata.resolution,
+          exerciseName: metadata.exerciseName,
+          muscleGroups: metadata.muscleGroups,
+          movementPattern: metadata.movementPattern,
+          modality: metadata.modality,
+          exerciseType: metadata.exerciseType,
+          instructions: metadata.instructions,
+          equipment: metadata.equipment,
+          difficulty: metadata.difficulty,
+        });
         await fileService.completeUpload(user.id, {
           fileId,
           eTags: eTags || undefined,
           durationInSeconds: metadata.durationInSeconds,
           resolution: metadata.resolution,
+          exerciseName: metadata.exerciseName,
+          muscleGroups: metadata.muscleGroups,
+          movementPattern: metadata.movementPattern,
+          modality: metadata.modality,
+          exerciseType: metadata.exerciseType,
+          instructions: metadata.instructions,
+          equipment: metadata.equipment,
+          difficulty: metadata.difficulty,
         });
 
         setUploadSuccess(true);

@@ -1,25 +1,27 @@
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Upload, X, AlertCircle, FileVideo, Clock, Maximize2, Database, CheckCircle, Zap, Eye, Lock, ChevronDown,
+  Upload, X, AlertCircle, FileVideo, Clock, Maximize2, Database, CheckCircle, Zap, Eye, Lock, ChevronDown, Plus, Trash2,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
 import { Card, CardContent } from '../../../components/ui/Card';
 import { cn } from '../../../lib/utils';
 import { fileService, FileMetadata } from '../../../services/fileService';
+import {
+  MODALITY, MUSCLE_GROUPS, MOVEMENT_PATTERNS, EQUIPMENT, DIFFICULTY,
+  MODALITY_LABELS, MUSCLE_GROUP_LABELS, MOVEMENT_PATTERN_LABELS, EQUIPMENT_LABELS, DIFFICULTY_LABELS
+} from '../../../lib/constants/exerciseConstants';
 
 const VIDEO_CATEGORIES = [
-  { value: 'strength', label: 'Strength Training' },
-  { value: 'legs', label: 'Legs' },
-  { value: 'arms', label: 'Arms' },
-  { value: 'cardio', label: 'Cardio' },
-  { value: 'core', label: 'Core' },
-  { value: 'flexibility', label: 'Flexibility' },
-  { value: 'hiit', label: 'HIIT' },
-  { value: 'yoga', label: 'Yoga' },
-  { value: 'stretching', label: 'Stretching' },
-  { value: 'recovery', label: 'Recovery' },
+  { value: 'YOGA', label: 'Yoga' },
+  { value: 'HIIT', label: 'HIIT' },
+  { value: 'STRENGTH', label: 'Strength Training' },
+  { value: 'CARDIO', label: 'Cardio' },
+  { value: 'STRETCHING', label: 'Stretching' },
+  { value: 'MEDITATION', label: 'Meditation' },
+  { value: 'NUTRITION', label: 'Nutrition' },
+  { value: 'OTHER', label: 'Other' },
 ] as const;
 
 interface VideoUploadModalProps {
@@ -47,20 +49,46 @@ export default function VideoUploadModal({
     thumbnail: '',
   });
   const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC'>('PRIVATE');
-  const [category, setCategory] = useState<string>('strength');
+  const [category, setCategory] = useState<string>('STRENGTH');
+  const [exerciseMetadata, setExerciseMetadata] = useState({
+    exerciseName: '',
+    muscleGroups: [] as string[],
+    movementPattern: '' as typeof MOVEMENT_PATTERNS[number] | '',
+    modality: '' as typeof MODALITY[number] | '',
+    exerciseType: '' as 'REPS' | 'TIMED' | '',
+    instructions: [] as string[],
+    equipment: [] as string[],
+    difficulty: '' as typeof DIFFICULTY[number] | '',
+  });
+  const [newInstruction, setNewInstruction] = useState('');
   const [error, setError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [step, setStep] = useState<'select' | 'details' | 'uploading'>('select');
   const [localProgress, setLocalProgress] = useState(0);
+  const [muscleGroupsOpen, setMuscleGroupsOpen] = useState(false);
+  const [equipmentOpen, setEquipmentOpen] = useState(false);
 
   const resetForm = () => {
     setSelectedFile(null);
     setVideoMetadata({ name: '', duration: 0, resolution: '', format: '', thumbnail: '' });
     setVisibility('PRIVATE');
-    setCategory('strength');
+    setCategory('STRENGTH');
+    setExerciseMetadata({
+      exerciseName: '',
+      muscleGroups: [],
+      movementPattern: '',
+      modality: '',
+      exerciseType: '',
+      instructions: [],
+      equipment: [],
+      difficulty: '',
+    });
+    setNewInstruction('');
     setError('');
     setStep('select');
     setLocalProgress(0);
+    setMuscleGroupsOpen(false);
+    setEquipmentOpen(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -197,6 +225,14 @@ export default function VideoUploadModal({
         visibility,
         category,
         name: videoMetadata.name,
+        exerciseName: exerciseMetadata.exerciseName || undefined,
+        muscleGroups: exerciseMetadata.muscleGroups.length > 0 ? exerciseMetadata.muscleGroups : undefined,
+        movementPattern: exerciseMetadata.movementPattern || undefined,
+        modality: exerciseMetadata.modality || undefined,
+        exerciseType: exerciseMetadata.exerciseType || undefined,
+        instructions: exerciseMetadata.instructions.length > 0 ? exerciseMetadata.instructions : undefined,
+        equipment: exerciseMetadata.equipment.length > 0 ? exerciseMetadata.equipment : undefined,
+        difficulty: exerciseMetadata.difficulty || undefined,
       } as any);
 
       clearInterval(progressInterval);
@@ -390,6 +426,333 @@ export default function VideoUploadModal({
                             )}
                           </button>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Exercise Name */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Exercise Name
+                      </label>
+                      <Input
+                        type="text"
+                        value={exerciseMetadata.exerciseName}
+                        onChange={(e) =>
+                          setExerciseMetadata({ ...exerciseMetadata, exerciseName: e.target.value })
+                        }
+                        placeholder="e.g., Barbell Bench Press"
+                        className="h-11 rounded-xl border-slate-200"
+                      />
+                    </div>
+
+                    {/* Modality */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Modality
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={exerciseMetadata.modality}
+                          onChange={(e) =>
+                            setExerciseMetadata({ ...exerciseMetadata, modality: e.target.value as any })
+                          }
+                          className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-semibold text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        >
+                          <option value="">Select Modality</option>
+                          {MODALITY.map((m) => (
+                            <option key={m} value={m}>
+                              {MODALITY_LABELS[m]}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Movement Pattern */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Movement Pattern
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={exerciseMetadata.movementPattern}
+                          onChange={(e) =>
+                            setExerciseMetadata({ ...exerciseMetadata, movementPattern: e.target.value as any })
+                          }
+                          className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-semibold text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        >
+                          <option value="">Select Movement Pattern</option>
+                          {MOVEMENT_PATTERNS.map((m) => (
+                            <option key={m} value={m}>
+                              {MOVEMENT_PATTERN_LABELS[m]}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Difficulty */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Difficulty
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={exerciseMetadata.difficulty}
+                          onChange={(e) =>
+                            setExerciseMetadata({ ...exerciseMetadata, difficulty: e.target.value as any })
+                          }
+                          className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-semibold text-sm appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        >
+                          <option value="">Select Difficulty</option>
+                          {DIFFICULTY.map((d) => (
+                            <option key={d} value={d}>
+                              {DIFFICULTY_LABELS[d]}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    {/* Exercise Type */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Exercise Type
+                      </label>
+                      <div className="flex gap-3">
+                        {(['REPS', 'TIMED'] as const).map((type) => (
+                          <button
+                            key={type}
+                            onClick={() =>
+                              setExerciseMetadata({ ...exerciseMetadata, exerciseType: type })
+                            }
+                            className={cn(
+                              'flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200',
+                              exerciseMetadata.exerciseType === type
+                                ? 'bg-accent text-white shadow-sm'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                            )}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Muscle Groups */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Muscle Groups
+                      </label>
+                      <div className="relative">
+                        <button
+                          onClick={() => setMuscleGroupsOpen(!muscleGroupsOpen)}
+                          className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-semibold text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        >
+                          <span>
+                            {exerciseMetadata.muscleGroups.length > 0
+                              ? `${exerciseMetadata.muscleGroups.length} selected`
+                              : 'Select muscles'}
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              'w-4 h-4 text-slate-400 transition-transform',
+                              muscleGroupsOpen && 'rotate-180'
+                            )}
+                          />
+                        </button>
+                        {muscleGroupsOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                            {MUSCLE_GROUPS.map((muscle) => (
+                              <label
+                                key={muscle}
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={exerciseMetadata.muscleGroups.includes(muscle)}
+                                  onChange={() => {
+                                    const updated = exerciseMetadata.muscleGroups.includes(muscle)
+                                      ? exerciseMetadata.muscleGroups.filter((m) => m !== muscle)
+                                      : [...exerciseMetadata.muscleGroups, muscle];
+                                    setExerciseMetadata({ ...exerciseMetadata, muscleGroups: updated });
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent cursor-pointer"
+                                />
+                                <span className="text-sm text-slate-700">{MUSCLE_GROUP_LABELS[muscle]}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {exerciseMetadata.muscleGroups.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {exerciseMetadata.muscleGroups.map((muscle) => (
+                            <span
+                              key={muscle}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full"
+                            >
+                              {MUSCLE_GROUP_LABELS[muscle]}
+                              <button
+                                onClick={() => {
+                                  const updated = exerciseMetadata.muscleGroups.filter(
+                                    (m) => m !== muscle
+                                  );
+                                  setExerciseMetadata({ ...exerciseMetadata, muscleGroups: updated });
+                                }}
+                                className="ml-1 hover:text-green-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Equipment */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Equipment
+                      </label>
+                      <div className="relative">
+                        <button
+                          onClick={() => setEquipmentOpen(!equipmentOpen)}
+                          className="w-full h-11 px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 font-semibold text-sm text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
+                        >
+                          <span>
+                            {exerciseMetadata.equipment.length > 0
+                              ? `${exerciseMetadata.equipment.length} selected`
+                              : 'Select equipment'}
+                          </span>
+                          <ChevronDown
+                            className={cn(
+                              'w-4 h-4 text-slate-400 transition-transform',
+                              equipmentOpen && 'rotate-180'
+                            )}
+                          />
+                        </button>
+                        {equipmentOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                            {EQUIPMENT.map((equip) => (
+                              <label
+                                key={equip}
+                                className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={exerciseMetadata.equipment.includes(equip)}
+                                  onChange={() => {
+                                    const updated = exerciseMetadata.equipment.includes(equip)
+                                      ? exerciseMetadata.equipment.filter((e) => e !== equip)
+                                      : [...exerciseMetadata.equipment, equip];
+                                    setExerciseMetadata({ ...exerciseMetadata, equipment: updated });
+                                  }}
+                                  className="w-4 h-4 rounded border-slate-300 text-accent focus:ring-accent cursor-pointer"
+                                />
+                                <span className="text-sm text-slate-700">{EQUIPMENT_LABELS[equip]}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {exerciseMetadata.equipment.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {exerciseMetadata.equipment.map((equip) => (
+                            <span
+                              key={equip}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-100 text-cyan-700 text-xs font-semibold rounded-full"
+                            >
+                              {EQUIPMENT_LABELS[equip]}
+                              <button
+                                onClick={() => {
+                                  const updated = exerciseMetadata.equipment.filter(
+                                    (e) => e !== equip
+                                  );
+                                  setExerciseMetadata({ ...exerciseMetadata, equipment: updated });
+                                }}
+                                className="ml-1 hover:text-cyan-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Instructions */}
+                    <div>
+                      <label className="block text-sm font-bold text-slate-900 mb-2">
+                        Instructions
+                      </label>
+                      <div className="space-y-2">
+                        {exerciseMetadata.instructions.length > 0 && (
+                          <div className="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            {exerciseMetadata.instructions.map((instruction, idx) => (
+                              <div key={idx} className="flex items-center justify-between gap-2">
+                                <span className="text-sm text-slate-700">
+                                  {idx + 1}. {instruction}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    const updated = exerciseMetadata.instructions.filter(
+                                      (_, i) => i !== idx
+                                    );
+                                    setExerciseMetadata({
+                                      ...exerciseMetadata,
+                                      instructions: updated,
+                                    });
+                                  }}
+                                  className="p-1 hover:bg-red-100 rounded transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <Input
+                            type="text"
+                            value={newInstruction}
+                            onChange={(e) => setNewInstruction(e.target.value)}
+                            placeholder="Add instruction step..."
+                            className="h-11 rounded-xl border-slate-200"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && newInstruction.trim()) {
+                                setExerciseMetadata({
+                                  ...exerciseMetadata,
+                                  instructions: [
+                                    ...exerciseMetadata.instructions,
+                                    newInstruction,
+                                  ],
+                                });
+                                setNewInstruction('');
+                              }
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              if (newInstruction.trim()) {
+                                setExerciseMetadata({
+                                  ...exerciseMetadata,
+                                  instructions: [
+                                    ...exerciseMetadata.instructions,
+                                    newInstruction,
+                                  ],
+                                });
+                                setNewInstruction('');
+                              }
+                            }}
+                            className="px-4 py-2.5 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
 

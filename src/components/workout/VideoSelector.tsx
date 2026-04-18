@@ -37,7 +37,8 @@ export function VideoSelector({
   // Filter videos based on search and category
   const filteredVideos = useMemo(() => {
     return availableVideos.filter((video) => {
-      const matchesSearch = video.name
+      const displayName = video.exerciseName || video.name;
+      const matchesSearch = displayName
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
       const matchesCategory = !categoryFilter || (video.category || 'GENERAL') === categoryFilter;
@@ -207,7 +208,7 @@ export function VideoSelector({
 
                       <div className="flex-1 min-w-0">
                         <h3 className="truncate font-medium text-gray-900">
-                          {video.name}
+                          {video.exerciseName || video.name}
                         </h3>
                         <div className="mt-1 flex flex-wrap gap-2">
                           <span className="inline-block rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">

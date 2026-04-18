@@ -47,7 +47,8 @@ export function AddVideosWithExercisesModal({
   // Filter videos based on search and category
   const filteredVideos = useMemo(() => {
     return availableVideos.filter((video) => {
-      const matchesSearch = video.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const displayName = video.exerciseName || video.name;
+      const matchesSearch = displayName.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory =
         !categoryFilter || (video.category || 'GENERAL') === categoryFilter;
       return matchesSearch && matchesCategory;
@@ -80,10 +81,12 @@ export function AddVideosWithExercisesModal({
     selectedVideoIds.forEach((videoId) => {
       const video = availableVideos.find((v) => v.id === videoId);
       if (video) {
+        // Default exercise type based on video's exerciseType, fallback to REPS
+        const defaultExerciseType = video.exerciseType === 'TIMED' ? 'TIME' : 'REPS';
         entries.set(videoId, {
           videoId,
-          videoName: video.name,
-          exerciseType: 'REPS',
+          videoName: video.exerciseName || video.name,
+          exerciseType: defaultExerciseType,
           sets: [{ setNumber: 1, reps: 10, durationSeconds: null, restSeconds: 30 }],
         });
       }
@@ -254,8 +257,7 @@ export function AddVideosWithExercisesModal({
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: 20 }}
-                            onClick={() => toggleVideo(video.id)}
-                            className={`flex items-center gap-4 p-4 border rounded-lg cursor-pointer transition ${
+                            className={`flex items-center gap-4 p-4 border rounded-lg transition ${
                               isSelected
                                 ? 'bg-blue-50 border-blue-300'
                                 : 'bg-white border-gray-200 hover:border-gray-300'
@@ -264,14 +266,34 @@ export function AddVideosWithExercisesModal({
                             <input
                               type="checkbox"
                               checked={isSelected}
-                              onChange={() => {}}
+                              onChange={() => toggleVideo(video.id)}
                               className="h-5 w-5 cursor-pointer rounded border-gray-300 text-blue-600 flex-shrink-0"
-                              onClick={(e) => e.stopPropagation()}
                             />
+
+                            {/* Video Thumbnail */}
+                            <div
+                              className="relative w-20 h-20 rounded-lg bg-gradient-to-br from-slate-900 to-slate-800 overflow-hidden flex-shrink-0"
+                            >
+                              {video.s3Url ? (
+                                <>
+                                  <video
+                                    poster={video.thumbnailUrl || undefined}
+                                    preload="metadata"
+                                    className="w-full h-full object-cover bg-slate-900"
+                                  >
+                                    <source src={video.s3Url} type="video/mp4" />
+                                  </video>
+                                </>
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Play className="w-6 h-6 text-white/30" />
+                                </div>
+                              )}
+                            </div>
 
                             <div className="flex-1 min-w-0">
                               <h3 className="truncate font-medium text-gray-900">
-                                {video.name}
+                                {video.exerciseName || video.name}
                               </h3>
                               <div className="mt-1 flex flex-wrap gap-2">
                                 <span className="inline-block rounded bg-gray-100 px-2 py-1 text-xs text-gray-700">

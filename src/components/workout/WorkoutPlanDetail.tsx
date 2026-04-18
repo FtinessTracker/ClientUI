@@ -15,6 +15,7 @@ import {
   TrendingUp,
   Loader,
   Calendar,
+  Info,
 } from 'lucide-react';
 import { WorkoutLibrary, libraryService } from '../../services/libraryService';
 import { fileService, VideoInfo, VideoFile } from '../../services/fileService';
@@ -56,6 +57,8 @@ export function WorkoutPlanDetail({
   const [editingExerciseType, setEditingExerciseType] = useState<'REPS' | 'TIME'>('REPS');
   const [editingSets, setEditingSets] = useState<Array<{ setNumber: number; reps?: number | null; durationSeconds?: number | null; restSeconds: number }>>([]);
   const [updatingExerciseId, setUpdatingExerciseId] = useState<string | null>(null);
+  const [previewVideoId, setPreviewVideoId] = useState<string | null>(null);
+  const [infoModalVideoId, setInfoModalVideoId] = useState<string | null>(null);
 
   // Sync currentLibrary when prop changes
   useEffect(() => {
@@ -65,33 +68,52 @@ export function WorkoutPlanDetail({
   // Fetch video details for all videoIds
   useEffect(() => {
     const fetchVideos = async () => {
-      if (!currentLibrary.videoIds || currentLibrary.videoIds.length === 0) return;
+      // Collect all video IDs from both videoIds and videos arrays
+      const allVideoIds = new Set<string>();
+      
+      if (currentLibrary.videoIds?.length) {
+        currentLibrary.videoIds.forEach(id => allVideoIds.add(id));
+      }
+      
+      if (currentLibrary.videos?.length) {
+        currentLibrary.videos.forEach(v => allVideoIds.add(v.videoId));
+      }
 
+      if (allVideoIds.size === 0) {
+        setVideoDetails(new Map());
+        return;
+      }
+
+      console.log('Fetching video details for:', Array.from(allVideoIds));
       setLoadingVideos(true);
       const videoMap = new Map<string, VideoInfo>();
 
       try {
-        const videoPromises = currentLibrary.videoIds.map(videoId =>
+        const videoPromises = Array.from(allVideoIds).map(videoId =>
           fileService.getVideoById(videoId)
             .then(video => {
+              console.log(`Fetched video ${videoId}:`, video);
               videoMap.set(videoId, video);
             })
             .catch(err => {
               console.error(`Failed to fetch video ${videoId}:`, err);
+              showError(`Failed to load video ${videoId}`);
             })
         );
 
         await Promise.all(videoPromises);
+        console.log('All videos fetched. Total:', videoMap.size);
         setVideoDetails(videoMap);
       } catch (err) {
         console.error('Error fetching video details:', err);
+        showError('Failed to load video details');
       } finally {
         setLoadingVideos(false);
       }
     };
 
     fetchVideos();
-  }, [currentLibrary.videoIds]);
+  }, [currentLibrary.videoIds, currentLibrary.videos, showError]);
 
   // Handle delete video from this specific plan
   const handleDeleteVideo = async (videoId: string) => {
@@ -377,31 +399,35 @@ export function WorkoutPlanDetail({
                       key={video.videoId}
                       className="p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition flex gap-4 bg-white"
                     >
-                      {/* Video Screen with Play Button */}
-                      <div className="relative w-28 h-28 rounded-lg bg-black flex-shrink-0 overflow-hidden group cursor-pointer">
+                      {/* Video Screen Thumbnail */}
+                      <div 
+                        onClick={() => setPreviewVideoId(video.videoId)}
+                        className="relative w-36 h-36 rounded-lg bg-gradient-to-br from-slate-900 to-slate-800 flex-shrink-0 overflow-hidden group cursor-pointer"
+                      >
                         {videoInfo?.url ? (
                           <>
                             <video
-                              poster={videoInfo?.thumbnailUrl}
-                              className="w-full h-full object-cover"
+                              poster={videoInfo?.thumbnailUrl || undefined}
+                              preload="metadata"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 bg-slate-900"
                             >
                               <source src={videoInfo.url} type="video/mp4" />
                             </video>
                             {/* Play Button Overlay */}
-                            <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 transition flex items-center justify-center">
-                              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center group-hover:scale-110 transition shadow-lg">
-                                <Play className="h-6 w-6 text-blue-600 ml-0.5" />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg">
+                                <Play className="w-6 h-6 text-slate-900 ml-0.5" />
                               </div>
                             </div>
                           </>
                         ) : (
-                          <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400 flex items-center justify-center">
-                            <Play className="h-8 w-8 text-white opacity-70" />
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Play className="w-12 h-12 text-white/30" />
                           </div>
                         )}
                         {/* Duration Badge */}
                         {videoInfo?.durationInSeconds && (
-                          <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs font-semibold px-2 py-1 rounded">
+                          <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-semibold px-2 py-1 rounded">
                             {duration}
                           </div>
                         )}
@@ -413,7 +439,7 @@ export function WorkoutPlanDetail({
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <h3 className="font-semibold text-gray-900 line-clamp-2">
-                                {videoInfo?.name || `Video ${idx + 1}`}
+                                {videoInfo?.exerciseName || videoInfo?.name || `Video ${idx + 1}`}
                               </h3>
                               {videoInfo && !videoInfo.active && (
                                 <span className="inline-block px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded font-semibold whitespace-nowrap">
@@ -421,10 +447,9 @@ export function WorkoutPlanDetail({
                                 </span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">ID: {video.videoId}</p>
                             
                             {videoInfo && (
-                              <div className="flex flex-wrap gap-3 mt-3 text-sm">
+                              <div className="flex flex-wrap gap-3 mt-3 text-sm items-center">
                                 <span className="flex items-center gap-1 text-gray-600">
                                   <Clock className="h-4 w-4" />
                                   {duration}
@@ -434,6 +459,14 @@ export function WorkoutPlanDetail({
                                     {videoInfo.category}
                                   </span>
                                 )}
+                                <button
+                                  onClick={() => setInfoModalVideoId(video.videoId)}
+                                  className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-xs hover:bg-blue-50 px-2 py-1 rounded transition font-medium"
+                                  title="View exercise details and instructions"
+                                >
+                                  <Info className="h-4 w-4" />
+                                  Info
+                                </button>
                                 {videoInfo.resolution && (
                                   <span className="text-xs text-gray-600">
                                     {videoInfo.resolution}
@@ -486,7 +519,7 @@ export function WorkoutPlanDetail({
                             )}
                           </div>
 
-                          {/* Delete Button */}
+                          {/* Delete Button - Top Right */}
                           <button
                             onClick={() => handleDeleteVideo(video.videoId)}
                             disabled={deletingVideoId === video.videoId || (videoInfo && !videoInfo.active)}
@@ -711,7 +744,150 @@ export function WorkoutPlanDetail({
             )}
           </AnimatePresence>
 
-          {/* Agenda */}
+          {/* Video Preview Modal */}
+          <AnimatePresence>
+            {previewVideoId && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+                onClick={() => setPreviewVideoId(null)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                  animate={{ scale: 1, opacity: 1, y: 0 }}
+                  exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="relative w-full max-w-sm bg-black rounded-xl overflow-hidden shadow-2xl max-h-[95vh] overflow-y-auto"
+                >
+                  {(() => {
+                    const videoInfo = videoDetails.get(previewVideoId);
+                    return (
+                      <div className="flex flex-col">
+                        {/* Video Player - Portrait */}
+                        <div className="relative w-full aspect-[9/16] bg-black flex items-center justify-center overflow-hidden">
+                          {videoInfo?.url ? (
+                            <video
+                              key={videoInfo.url}
+                              controls
+                              autoPlay
+                              poster={videoInfo?.thumbnailUrl || undefined}
+                              className="w-full h-full object-cover"
+                            >
+                              <source src={videoInfo.url} type="video/mp4" />
+                            </video>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+                              <Play className="h-12 w-12 text-white/50" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Video Info Section */}
+                        <div className="px-4 py-4 space-y-4 bg-gray-900">
+                          {/* Video Name */}
+                          <div>
+                            <h3 className="text-base font-bold text-white truncate">
+                              {videoInfo?.name || 'Video'}
+                            </h3>
+                          </div>
+
+                          {/* Exercise Details */}
+                          {videoInfo && (
+                            <div className="space-y-3">
+                              {/* Exercise Name */}
+                              {videoInfo.exerciseName && (
+                                <div className="bg-blue-500/20 rounded-lg p-3 border border-blue-500/30">
+                                  <p className="text-xs text-blue-300 font-medium uppercase">Exercise</p>
+                                  <p className="text-sm text-blue-100 font-semibold mt-1">{videoInfo.exerciseName}</p>
+                                </div>
+                              )}
+
+                              {/* Modality & Difficulty */}
+                              <div className="grid grid-cols-2 gap-2">
+                                {videoInfo.modality && (
+                                  <div className="bg-purple-500/20 rounded p-2 border border-purple-500/30">
+                                    <p className="text-xs text-purple-300 font-medium">Modality</p>
+                                    <p className="text-xs text-purple-100 mt-1">{videoInfo.modality}</p>
+                                  </div>
+                                )}
+                                {videoInfo.difficulty && (
+                                  <div className="bg-orange-500/20 rounded p-2 border border-orange-500/30">
+                                    <p className="text-xs text-orange-300 font-medium">Difficulty</p>
+                                    <p className="text-xs text-orange-100 mt-1">{videoInfo.difficulty}</p>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Muscle Groups */}
+                              {videoInfo.muscleGroups && videoInfo.muscleGroups.length > 0 && (
+                                <div className="bg-green-500/20 rounded-lg p-3 border border-green-500/30">
+                                  <p className="text-xs text-green-300 font-medium uppercase">Muscle Groups</p>
+                                  <div className="flex flex-wrap gap-1 mt-2">
+                                    {videoInfo.muscleGroups.map((muscle) => (
+                                      <span key={muscle} className="text-xs bg-green-600/40 text-green-100 px-2 py-1 rounded">
+                                        {muscle}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Movement Pattern & Equipment */}
+                              <div className="grid grid-cols-2 gap-2">
+                                {videoInfo.movementPattern && (
+                                  <div className="bg-cyan-500/20 rounded p-2 border border-cyan-500/30">
+                                    <p className="text-xs text-cyan-300 font-medium">Movement</p>
+                                    <p className="text-xs text-cyan-100 mt-1">{videoInfo.movementPattern}</p>
+                                  </div>
+                                )}
+                                {videoInfo.equipment && videoInfo.equipment.length > 0 && (
+                                  <div className="bg-yellow-500/20 rounded p-2 border border-yellow-500/30">
+                                    <p className="text-xs text-yellow-300 font-medium">Equipment</p>
+                                    <div className="flex flex-wrap gap-0.5 mt-1">
+                                      {videoInfo.equipment.slice(0, 2).map((eq) => (
+                                        <span key={eq} className="text-xs bg-yellow-600/40 text-yellow-100 px-1.5 py-0.5 rounded">
+                                          {eq}
+                                        </span>
+                                      ))}
+                                      {videoInfo.equipment.length > 2 && (
+                                        <span className="text-xs text-yellow-100">+{videoInfo.equipment.length - 2}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Instructions */}
+                              {videoInfo.instructions && videoInfo.instructions.length > 0 && (
+                                <div className="bg-indigo-500/20 rounded-lg p-3 border border-indigo-500/30">
+                                  <p className="text-xs text-indigo-300 font-medium uppercase">Instructions</p>
+                                  <ol className="list-decimal list-inside space-y-1 mt-2">
+                                    {videoInfo.instructions.map((instruction, idx) => (
+                                      <li key={idx} className="text-xs text-indigo-100">{instruction}</li>
+                                    ))}
+                                  </ol>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                          onClick={() => setPreviewVideoId(null)}
+                          className="absolute top-3 right-3 p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white transition z-10"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {currentLibrary.agenda && currentLibrary.agenda.length > 0 && (
             <div>
               <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -865,6 +1041,138 @@ export function WorkoutPlanDetail({
           </button>
         </div>
       </div>
+
+      {/* Exercise Info Modal */}
+      <AnimatePresence>
+        {infoModalVideoId && (() => {
+          const videoInfo = videoDetails.get(infoModalVideoId);
+          if (!videoInfo) return null;
+          
+          return (
+            <motion.div
+              key="info-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+              onClick={() => setInfoModalVideoId(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-lg bg-white shadow-2xl"
+              >
+                {/* Modal Header */}
+                <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4">
+                  <h2 className="text-lg font-semibold text-gray-900">Exercise Information</h2>
+                  <button
+                    onClick={() => setInfoModalVideoId(null)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {/* Modal Content */}
+                <div className="px-6 py-4 space-y-4">
+                  {/* Exercise Name */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">
+                      {videoInfo.exerciseName || videoInfo.name}
+                    </h3>
+                  </div>
+
+                  {/* Basic Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Duration</p>
+                      <p className="text-sm text-gray-900 mt-1">
+                        {videoInfo.durationInSeconds ? fileService.formatDuration(videoInfo.durationInSeconds) : 'N/A'}
+                      </p>
+                    </div>
+                    {videoInfo.category && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</p>
+                        <p className="text-sm text-gray-900 mt-1">{videoInfo.category}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Exercise Metadata */}
+                  {videoInfo.muscleGroups && videoInfo.muscleGroups.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Muscle Groups</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {videoInfo.muscleGroups.map((group) => (
+                          <span key={group} className="inline-block px-3 py-1 bg-green-50 text-green-700 text-xs rounded-full font-medium">
+                            {group}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {videoInfo.equipment && videoInfo.equipment.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Equipment</p>
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {videoInfo.equipment.map((eq) => (
+                          <span key={eq} className="inline-block px-3 py-1 bg-purple-50 text-purple-700 text-xs rounded-full font-medium">
+                            {eq}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {videoInfo.difficulty && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Difficulty</p>
+                      <p className="text-sm text-gray-900 mt-1">{videoInfo.difficulty}</p>
+                    </div>
+                  )}
+
+                  {videoInfo.modality && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Modality</p>
+                      <p className="text-sm text-gray-900 mt-1">{videoInfo.modality}</p>
+                    </div>
+                  )}
+
+                  {videoInfo.movementPattern && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Movement Pattern</p>
+                      <p className="text-sm text-gray-900 mt-1">{videoInfo.movementPattern}</p>
+                    </div>
+                  )}
+
+                  {/* Instructions */}
+                  {videoInfo.instructions && videoInfo.instructions.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Instructions</p>
+                      <ol className="list-decimal list-inside space-y-2 mt-2">
+                        {videoInfo.instructions.map((instruction, idx) => (
+                          <li key={idx} className="text-sm text-gray-700">
+                            {instruction}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
+                  {!videoInfo.muscleGroups && !videoInfo.equipment && !videoInfo.difficulty && !videoInfo.modality && !videoInfo.movementPattern && !videoInfo.instructions && (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No additional exercise information available</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </motion.div>
   );
 }

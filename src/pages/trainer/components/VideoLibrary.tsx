@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Play, Trash2, Lock, Eye, X, AlertCircle, CheckCircle, Edit2, Grid3x3, List, Clock, Maximize2, Database
+  Play, Trash2, Lock, Eye, X, AlertCircle, CheckCircle, Edit2, Grid3x3, List, Clock, Maximize2, Database, Info, Plus
 } from 'lucide-react';
 import { Button } from '../../../components/ui/Button';
 import { Input } from '../../../components/ui/Input';
@@ -32,12 +32,27 @@ export default function VideoLibrary({
   const { confirm: showConfirm } = useConfirmDialog();
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [editingVideo, setEditingVideo] = useState<VideoFile | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', visibility: 'PRIVATE' as const, category: 'GENERAL' });
+  const [editForm, setEditForm] = useState({ 
+    name: '', 
+    visibility: 'PRIVATE' as const, 
+    category: 'GENERAL',
+    exerciseName: '',
+    muscleGroups: [] as string[],
+    movementPattern: '',
+    modality: '',
+    exerciseType: '',
+    instructions: [] as string[],
+    equipment: [] as string[],
+    difficulty: '',
+  });
   const [isUpdating, setIsUpdating] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
   const [groupByCategory, setGroupByCategory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredVideoId, setHoveredVideoId] = useState<string | null>(null);
+  const [infoPopupVideoId, setInfoPopupVideoId] = useState<string | null>(null);
+  const [newInstruction, setNewInstruction] = useState('');
 
   const handleDelete = async (videoId: string) => {
     const confirmed = await showConfirm({
@@ -66,7 +81,16 @@ export default function VideoLibrary({
       name: video.name,
       visibility: video.visibility as 'PUBLIC' | 'PRIVATE',
       category: video.category || 'GENERAL',
+      exerciseName: video.exerciseName || '',
+      muscleGroups: video.muscleGroups || [],
+      movementPattern: video.movementPattern || '',
+      modality: video.modality || '',
+      exerciseType: video.exerciseType || '',
+      instructions: video.instructions || [],
+      equipment: video.equipment || [],
+      difficulty: video.difficulty || '',
     });
+    setNewInstruction('');
   };
 
   const handleUpdateVideo = async () => {
@@ -78,6 +102,14 @@ export default function VideoLibrary({
         name: editForm.name,
         visibility: editForm.visibility,
         category: editForm.category as any,
+        exerciseName: editForm.exerciseName || undefined,
+        muscleGroups: editForm.muscleGroups.length > 0 ? editForm.muscleGroups : undefined,
+        movementPattern: editForm.movementPattern || undefined,
+        modality: editForm.modality || undefined,
+        exerciseType: editForm.exerciseType || undefined,
+        instructions: editForm.instructions.length > 0 ? editForm.instructions : undefined,
+        equipment: editForm.equipment.length > 0 ? editForm.equipment : undefined,
+        difficulty: editForm.difficulty || undefined,
       });
 
       showSuccess('Video updated successfully');
@@ -277,14 +309,86 @@ export default function VideoLibrary({
 
                 {/* Info Section */}
                 <div className={groupByCategory ? 'p-2 bg-white space-y-2 text-center' : 'p-3 bg-white space-y-3 text-center'}>
-                  <div>
-                    <h3 className={groupByCategory ? 'font-bold text-slate-900 line-clamp-2 text-xs' : 'font-black text-slate-900 line-clamp-2 text-sm'}>
-                      {video.name}
-                    </h3>
-                    {!groupByCategory && (
-                      <p className="text-xs text-gray-600 mt-1">
-                        {video.category || 'GENERAL'} • {formatDate(video.createdAt)}
-                      </p>
+                  <div className="relative">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 text-left">
+                        <h3 className={groupByCategory ? 'font-bold text-slate-900 line-clamp-2 text-xs' : 'font-black text-slate-900 line-clamp-2 text-sm'}>
+                          {video.exerciseName || video.name}
+                        </h3>
+                        {!groupByCategory && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            {video.category || 'GENERAL'} • {formatDate(video.createdAt)}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onMouseEnter={() => setHoveredVideoId(video.id)}
+                        onClick={() => setInfoPopupVideoId(infoPopupVideoId === video.id ? null : video.id)}
+                        className="flex-shrink-0 p-1 hover:bg-slate-100 rounded transition-colors text-slate-400 hover:text-slate-600"
+                        title="View details"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Info Popup */}
+                    {infoPopupVideoId === video.id && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        onMouseLeave={() => setInfoPopupVideoId(null)}
+                        className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-xl shadow-lg z-20 p-3 text-left text-xs max-w-xs"
+                      >
+                        {video.exerciseName && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <p className="text-slate-500 font-semibold">Exercise</p>
+                            <p className="text-slate-900 font-bold">{video.exerciseName}</p>
+                          </div>
+                        )}
+                        {video.durationInSeconds && (
+                          <div className="mb-2 pb-2 border-b border-slate-100 flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            <span className="text-slate-700">{Math.round(video.durationInSeconds / 60)} min</span>
+                          </div>
+                        )}
+                        {video.difficulty && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <p className="text-slate-500 font-semibold">Difficulty</p>
+                            <p className="text-slate-900 font-bold">{video.difficulty}</p>
+                          </div>
+                        )}
+                        {video.modality && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <p className="text-slate-500 font-semibold">Modality</p>
+                            <p className="text-slate-900 font-bold">{video.modality}</p>
+                          </div>
+                        )}
+                        {video.muscleGroups && video.muscleGroups.length > 0 && (
+                          <div className="mb-2 pb-2 border-b border-slate-100">
+                            <p className="text-slate-500 font-semibold">Muscle Groups</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {video.muscleGroups.map((muscle) => (
+                                <span key={muscle} className="inline-block px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-semibold">
+                                  {muscle}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {video.equipment && video.equipment.length > 0 && (
+                          <div>
+                            <p className="text-slate-500 font-semibold">Equipment</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {video.equipment.map((equip) => (
+                                <span key={equip} className="inline-block px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded text-xs font-semibold">
+                                  {equip}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </motion.div>
                     )}
                   </div>
 
@@ -628,9 +732,9 @@ export default function VideoLibrary({
                 }
               }}
             >
-              <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full">
+              <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between p-7 border-b border-slate-200">
+                <div className="flex items-center justify-between p-7 border-b border-slate-200 flex-shrink-0">
                   <h2 className="text-2xl font-black text-slate-900 tracking-tight">Edit Video</h2>
                   <button
                     onClick={() => setEditingVideo(null)}
@@ -640,8 +744,8 @@ export default function VideoLibrary({
                   </button>
                 </div>
 
-                {/* Content */}
-                <div className="p-7 space-y-5">
+                {/* Content - Scrollable */}
+                <div className="p-7 space-y-5 overflow-y-auto flex-1">
 
                   {/* Video Name */}
                   <div>
@@ -707,10 +811,221 @@ export default function VideoLibrary({
                       ))}
                     </div>
                   </div>
+
+                  {/* Exercise Name */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">
+                      Exercise Name
+                    </label>
+                    <Input
+                      type="text"
+                      value={editForm.exerciseName}
+                      onChange={(e) => setEditForm({ ...editForm, exerciseName: e.target.value })}
+                      placeholder="e.g., Barbell Bench Press"
+                      className="h-10 rounded-xl border-slate-200"
+                      disabled={isUpdating}
+                    />
+                  </div>
+
+                  {/* Modality */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">Modality</label>
+                    <select
+                      value={editForm.modality}
+                      onChange={(e) => setEditForm({ ...editForm, modality: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                      disabled={isUpdating}
+                    >
+                      <option value="">Select Modality</option>
+                      <option value="STRENGTH">Strength</option>
+                      <option value="MOBILITY">Mobility</option>
+                      <option value="FLEXIBILITY">Flexibility</option>
+                      <option value="CARDIO">Cardio</option>
+                      <option value="PLYOMETRIC">Plyometric</option>
+                      <option value="BALANCE">Balance</option>
+                      <option value="ENDURANCE">Endurance</option>
+                      <option value="REHAB">Rehab</option>
+                    </select>
+                  </div>
+
+                  {/* Movement Pattern */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">Movement Pattern</label>
+                    <select
+                      value={editForm.movementPattern}
+                      onChange={(e) => setEditForm({ ...editForm, movementPattern: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                      disabled={isUpdating}
+                    >
+                      <option value="">Select Movement Pattern</option>
+                      <option value="PUSH">Push</option>
+                      <option value="PULL">Pull</option>
+                      <option value="SQUAT">Squat</option>
+                      <option value="HINGE">Hinge</option>
+                      <option value="LUNGE">Lunge</option>
+                      <option value="CARRY">Carry</option>
+                      <option value="ROTATION">Rotation</option>
+                      <option value="FULL_BODY">Full Body</option>
+                      <option value="CARDIO">Cardio</option>
+                      <option value="ISOMETRIC">Isometric</option>
+                    </select>
+                  </div>
+
+                  {/* Difficulty */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">Difficulty</label>
+                    <select
+                      value={editForm.difficulty}
+                      onChange={(e) => setEditForm({ ...editForm, difficulty: e.target.value })}
+                      className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
+                      disabled={isUpdating}
+                    >
+                      <option value="">Select Difficulty</option>
+                      <option value="BEGINNER">Beginner</option>
+                      <option value="INTERMEDIATE">Intermediate</option>
+                      <option value="ADVANCED">Advanced</option>
+                    </select>
+                  </div>
+
+                  {/* Exercise Type */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-3">Exercise Type</label>
+                    <div className="flex gap-3">
+                      {['REPS', 'TIMED'].map((type) => (
+                        <button
+                          key={type}
+                          onClick={() => setEditForm({ ...editForm, exerciseType: type })}
+                          disabled={isUpdating}
+                          className={cn(
+                            'flex-1 px-4 py-3 rounded-xl font-bold text-sm transition-all duration-200',
+                            editForm.exerciseType === type
+                              ? 'bg-accent text-white shadow-sm'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          )}
+                        >
+                          {type}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Muscle Groups */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-3">Muscle Groups</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['CHEST', 'TRICEPS', 'QUADS', 'GLUTES', 'HAMSTRINGS', 'BACK', 'BICEPS', 'SHOULDERS', 'CORE', 'CALVES', 'HIP_GROIN', 'FOREARMS', 'FULL_BODY'].map((muscle) => (
+                        <button
+                          key={muscle}
+                          onClick={() => {
+                            const updated = editForm.muscleGroups.includes(muscle)
+                              ? editForm.muscleGroups.filter((m) => m !== muscle)
+                              : [...editForm.muscleGroups, muscle];
+                            setEditForm({ ...editForm, muscleGroups: updated });
+                          }}
+                          disabled={isUpdating}
+                          className={cn(
+                            'px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 text-center',
+                            editForm.muscleGroups.includes(muscle)
+                              ? 'bg-green-500 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          )}
+                        >
+                          {muscle.replace(/_/g, ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Equipment */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-3">Equipment</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {['DUMBBELL', 'BARBELL', 'KETTLEBELL', 'RESISTANCE_BAND', 'CABLE', 'MACHINE', 'BODYWEIGHT', 'FOAM_ROLLER', 'MEDICINE_BALL'].map((equip) => (
+                        <button
+                          key={equip}
+                          onClick={() => {
+                            const updated = editForm.equipment.includes(equip)
+                              ? editForm.equipment.filter((e) => e !== equip)
+                              : [...editForm.equipment, equip];
+                            setEditForm({ ...editForm, equipment: updated });
+                          }}
+                          disabled={isUpdating}
+                          className={cn(
+                            'px-3 py-2 rounded-lg font-semibold text-xs transition-all duration-200 text-center',
+                            editForm.equipment.includes(equip)
+                              ? 'bg-cyan-500 text-white'
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          )}
+                        >
+                          {equip.replace(/_/g, ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Instructions */}
+                  <div>
+                    <label className="block text-sm font-bold text-slate-900 mb-2">Instructions</label>
+                    <div className="space-y-2">
+                      {editForm.instructions.length > 0 && (
+                        <div className="space-y-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                          {editForm.instructions.map((instruction, idx) => (
+                            <div key={idx} className="flex items-center justify-between gap-2">
+                              <span className="text-sm text-slate-700">{idx + 1}. {instruction}</span>
+                              <button
+                                onClick={() => {
+                                  const updated = editForm.instructions.filter((_, i) => i !== idx);
+                                  setEditForm({ ...editForm, instructions: updated });
+                                }}
+                                disabled={isUpdating}
+                                className="p-1 hover:bg-red-100 rounded transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4 text-red-600" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex gap-2">
+                        <Input
+                          type="text"
+                          value={newInstruction}
+                          onChange={(e) => setNewInstruction(e.target.value)}
+                          placeholder="Add instruction step..."
+                          className="h-10 rounded-xl border-slate-200"
+                          disabled={isUpdating}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && newInstruction.trim()) {
+                              setEditForm({
+                                ...editForm,
+                                instructions: [...editForm.instructions, newInstruction],
+                              });
+                              setNewInstruction('');
+                            }
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            if (newInstruction.trim()) {
+                              setEditForm({
+                                ...editForm,
+                                instructions: [...editForm.instructions, newInstruction],
+                              });
+                              setNewInstruction('');
+                            }
+                          }}
+                          disabled={isUpdating || !newInstruction.trim()}
+                          className="px-4 py-2 bg-accent text-white rounded-xl font-bold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center gap-2"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex gap-3 p-7 border-t border-slate-200 bg-slate-50">
+                <div className="flex gap-3 p-7 border-t border-slate-200 bg-slate-50 flex-shrink-0">
                   <Button
                     variant="outline"
                     onClick={() => setEditingVideo(null)}
