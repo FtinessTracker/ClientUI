@@ -109,12 +109,14 @@ function ClientRoute({ children }: { children: React.ReactNode }) {
 
   if (!isLoaded || !userLoaded) return <LoadingScreen />;
 
+  // Client routes require a real Clerk session — mock trainer sessions are not allowed here
   if (!isSignedIn) {
     return <Navigate to="/sign-up" state={{ from: location }} replace />;
   }
 
+  // A Clerk-authenticated user whose role is trainer should go to the trainer area
   if (appUser?.role === 'trainer') {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/trainer/schedule" replace />;
   }
 
   return <ClientLayout>{children}</ClientLayout>;

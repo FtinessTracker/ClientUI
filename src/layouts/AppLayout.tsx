@@ -56,6 +56,9 @@ export default function AppLayout({ children, user }: { children: React.ReactNod
   const { user: clerkUser } = useUser();
 
   const handleLogout = async () => {
+    localStorage.removeItem('mockTrainer');
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('userId');
     await signOut();
     navigate('/');
   };
