@@ -371,11 +371,20 @@ export function LibraryManagement({ trainerId, trainerName, videos: initialVideo
             </div>
           ) : filteredLibraries.length === 0 ? (
             <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-              <p className="text-gray-600">
+              <p className="text-gray-600 mb-6">
                 {libraries.length === 0
                   ? 'No libraries yet. Create your first one!'
                   : 'No libraries match your search.'}
               </p>
+              {libraries.length === 0 && (
+                <button
+                  onClick={() => setViewMode('creation')}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Library
+                </button>
+              )}
             </div>
           ) : (
             <div className={displayMode === 'grid' ? 'grid gap-6 md:grid-cols-2 lg:grid-cols-3' : 'space-y-4'}>
