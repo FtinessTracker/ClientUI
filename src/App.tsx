@@ -164,8 +164,7 @@ function AppRoutes() {
       <Route path="/book/:id" element={<ClientRoute><BookingFlow /></ClientRoute>} />
       <Route path="/session/:id" element={<SessionRoute><SessionRoom /></SessionRoute>} />
 
-      {/* <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerDashboard /></TrainerRoute>} /> */}
-      <Route path="/dashboard" element={<TrainerRoute allowedRoles={['trainer']}><TrainerSchedule /></TrainerRoute>} />
+      <Route path="/dashboard" element={<Navigate to="/trainer/schedule" replace />} />
       <Route path="/trainer" element={<TrainerSignIn />} />
       <Route path="/trainer/login" element={<TrainerSignIn />} />
       <Route path="/trainer/sign-in" element={<TrainerSignIn />} />

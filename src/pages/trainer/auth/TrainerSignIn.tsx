@@ -42,7 +42,7 @@ export default function TrainerSignIn() {
         localStorage.setItem('userId', response.userId);
       }
 
-      navigate('/dashboard');
+      navigate('/trainer/schedule');
     } catch (err: any) {
       setError(err.message || 'Invalid email or password. Please try again.');
     } finally {
